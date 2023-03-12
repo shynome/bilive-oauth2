@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +14,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
-	"github.com/rs/xid"
 	"github.com/shynome/bilive"
 	"github.com/tidwall/buntdb"
 	"nhooyr.io/websocket"
@@ -62,9 +63,10 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 		}()
 
 		var vid string
-		err = cache.Update(func(tx *buntdb.Tx) error {
+		err = cache.Update(func(tx *buntdb.Tx) (err error) {
+			defer err2.Handle(&err)
 			for i := 0; i < 5; i++ {
-				vid = xid.New().String()
+				vid = try.To1(randomHex(8))
 				_, ierr := tx.Get(vid)
 				if errors.Is(ierr, buntdb.ErrNotFound) {
 					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{TTL: ttl})
@@ -154,4 +156,12 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 		store.Save()
 		return
 	})
+}
+
+func randomHex(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
