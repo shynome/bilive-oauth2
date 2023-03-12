@@ -3,7 +3,6 @@ module github.com/shynome/bilive-oauth2
 go 1.20
 
 require (
-	github.com/GeertJohan/go.rice v1.0.3
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-session/session v3.1.2+incompatible
 	github.com/jackc/pgx/v4 v4.18.1
@@ -18,7 +17,6 @@ require (
 )
 
 require (
-	github.com/daaku/go.zipexe v1.0.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/brotli/go/cbrotli v0.0.0-20230201092028-ed1995b6bda1 // indirect
 	github.com/google/uuid v1.1.1 // indirect

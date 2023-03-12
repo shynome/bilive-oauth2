@@ -3,16 +3,16 @@ package main
 import (
 	"embed"
 	"flag"
+	"io/fs"
 	"net/http"
 
-	rice "github.com/GeertJohan/go.rice"
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2/try"
 	"github.com/rs/xid"
 )
 
-//go:embed build
-var frontend embed.FS
+//go:embed all:build
+var frontendFiles embed.FS
 
 var args struct {
 	addr   string
@@ -30,10 +30,12 @@ func init() {
 
 func main() {
 
-	assertHandler := http.FileServer(rice.MustFindBox("build").HTTPBox())
 	e := echo.New()
 
+	frontend := try.To1(fs.Sub(frontendFiles, "build"))
+	assertHandler := http.FileServer(http.FS(frontend))
 	e.GET("*", echo.WrapHandler(assertHandler))
+
 	srv := initOAuth2Server(args.pg)
 	registerOAuth2Server(e.Group("/oauth"), srv)
 	registerBiliveServer(e.Group("/bilive"), args.room)
