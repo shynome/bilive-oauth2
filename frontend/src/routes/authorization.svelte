@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { invalidate } from "$app/navigation"
-	import { page } from "$app/stores"
-
 	export let whoami: string
 	let logout_pending = false
 	function logout() {
@@ -15,9 +13,16 @@
 				logout_pending = false
 			})
 	}
+	import Question from "./help/question-circle.svg"
+	import HelpModal from "./help-modal.svelte"
+	export let showHelp = false
 </script>
 
+<HelpModal bind:show={showHelp} />
 <div class="card">
+	<a href="#" class="help" on:click|preventDefault={() => (showHelp = true)}>
+		<img src={Question} alt="help" width="35" height="35" />
+	</a>
 	<h4>直播间弹幕验证UID</h4>
 	<hr />
 	<div class="desc">
@@ -28,12 +33,21 @@
 			<button disabled={logout_pending} on:click={logout}>退出</button>
 		</div>
 		<div class="one-click">
-			<a class="button" href="/oauth/allow">授权</a>
+			<a class="button" href="/oauth/allow">登录</a>
 		</div>
 	</div>
 </div>
 
 <style>
+	.card {
+		position: relative;
+	}
+	.help {
+		position: absolute;
+		right: 0;
+		top: 0;
+		font-size: 0;
+	}
 	h4 {
 		text-align: center;
 	}

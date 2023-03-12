@@ -6,6 +6,8 @@ export type Data = {
 	whoami: string
 }
 
+console.log("source repo: https://github.com/shynome/bilive-oauth2")
+
 export const load: Load = ({ fetch, depends }) => {
 	depends("app:whoami")
 	return {

@@ -10,9 +10,16 @@
 		}
 	}
 	import Danmu from "./danmu.svelte"
+	import Question from "./help/question-circle.svg"
+	import HelpModal from "./help-modal.svelte"
+	export let showHelp = false
 </script>
 
+<HelpModal bind:show={showHelp} />
 <div class="card">
+	<a href="#" class="help" on:click|preventDefault={() => (showHelp = true)}>
+		<img src={Question} alt="help" width="35" height="35" />
+	</a>
 	<h4>直播间弹幕验证UID</h4>
 	<hr />
 	<div class="desc panel">
@@ -24,7 +31,7 @@
 		<Clipboard let:copy text={verifyText} let:copied>
 			<div class="vt clearfix">
 				<input class="vtt button button-outline" value={verifyText} readonly />
-				<button on:click={copy}>{copied ? "已" : ""}复制</button>
+				<button on:click={copy}>{copied ? "已" : ""}复制验证弹幕</button>
 			</div>
 		</Clipboard>
 		<div class="one-click">
@@ -35,7 +42,7 @@
 					target="bilive_{roomid}"
 					on:click={copy}
 				>
-					点击复制, 去直播间{roomid}发送验证弹幕
+					去直播间{roomid}发送验证弹幕
 				</a>
 			</Clipboard>
 		</div>
@@ -59,6 +66,15 @@
 </div>
 
 <style>
+	.card {
+		position: relative;
+	}
+	.help {
+		position: absolute;
+		right: 0;
+		top: 0;
+		font-size: 0;
+	}
 	h4 {
 		text-align: center;
 	}
