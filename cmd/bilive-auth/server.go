@@ -29,6 +29,7 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
 
 	e := echo.New()
 
