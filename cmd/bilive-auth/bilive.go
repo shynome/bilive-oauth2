@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -35,7 +34,7 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 	cache := try.To1(buntdb.Open(":memory:"))
 	e.Any("/pair", func(c echo.Context) (err error) {
 		defer err2.Handle(&err, func() {
-			log.Println(err)
+			// log.Println(err)
 		})
 		w, r := c.Response(), c.Request()
 
@@ -82,7 +81,7 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 			// fmt.Println(7777)
 			go func(b []byte) {
 				defer err2.Catch(func(err error) {
-					log.Printf("decode packet %d err: %e", roomid, err)
+					// log.Printf("decode packet %d err: %e", roomid, err)
 				})
 				pkts := try.To1(bilive.DecodePackets(b))
 				for _, pkt := range pkts {
