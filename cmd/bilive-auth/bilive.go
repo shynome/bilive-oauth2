@@ -79,7 +79,7 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 
 		for {
 			_, b := try.To2(lc.Conn.Read(ctx))
-			fmt.Println(7777)
+			// fmt.Println(7777)
 			go func(b []byte) {
 				defer err2.Catch(func(err error) {
 					log.Printf("decode packet %d err: %e", roomid, err)

@@ -17,6 +17,8 @@ require (
 )
 
 require (
+	github.com/GeertJohan/go.rice v1.0.3 // indirect
+	github.com/daaku/go.zipexe v1.0.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/brotli/go/cbrotli v0.0.0-20230201092028-ed1995b6bda1 // indirect
 	github.com/google/uuid v1.1.1 // indirect
