@@ -24,7 +24,7 @@ var args struct {
 func init() {
 	flag.StringVar(&args.addr, "addr", ":9096", "http server listen addr")
 	flag.StringVar(&args.pg, "pg", "postgres://postgres:postgres@localhost:5432/postgres", "token file db")
-	flag.IntVar(&args.room, "room", 898286, "room id")
+	flag.IntVar(&args.room, "room", 27352037, "room id")
 	flag.StringVar(&args.secret, "secret", xid.New().String(), "cookie secret")
 }
 
