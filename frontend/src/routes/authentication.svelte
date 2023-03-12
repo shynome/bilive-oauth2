@@ -24,7 +24,7 @@
 		<Clipboard let:copy text={verifyText} let:copied>
 			<div class="vt clearfix">
 				<input class="vtt button button-outline" value={verifyText} readonly />
-				<button on:click={copy}>{copied ? "已" : "点击"}复制</button>
+				<button on:click={copy}>{copied ? "已" : ""}复制</button>
 			</div>
 		</Clipboard>
 		<div class="one-click">
@@ -32,11 +32,26 @@
 				<a
 					class="button"
 					href="https://live.bilibili.com/{roomid}"
-					on:click={copy}
 					target="bilive_{roomid}"
+					on:click={copy}
 				>
 					点击复制, 去直播间{roomid}发送验证弹幕
 				</a>
+			</Clipboard>
+		</div>
+		<div class="mobile-click">
+			<Clipboard let:copy text={verifyText}>
+				<a
+					href="https://live.bilibili.com/{roomid}"
+					target="bilive_{roomid}"
+					class="button button-outline"
+					on:click={copy}
+				>
+					{roomid}
+				</a>
+			</Clipboard>
+			<Clipboard let:copy text={roomid} let:copied>
+				<button on:click={copy}>{copied ? "已" : "点击"}复制直播间号</button>
 			</Clipboard>
 		</div>
 	</div>
@@ -90,10 +105,25 @@
 		justify-content: center;
 		align-items: center;
 	}
+	.mobile-click {
+		text-align: center;
+	}
+	.mobile-click a {
+		width: 100%;
+		margin-bottom: 1rem;
+	}
 	@media (max-width: 40rem) {
 		.card {
 			width: 95vw;
 			padding: 1rem;
+		}
+		.one-click {
+			display: none;
+		}
+	}
+	@media (min-width: 40rem) {
+		.mobile-click {
+			display: none;
 		}
 	}
 </style>
