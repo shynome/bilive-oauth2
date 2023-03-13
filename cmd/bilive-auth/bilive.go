@@ -152,7 +152,8 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 		w, r := c.Response(), c.Request()
 		ctx := r.Context()
 		store := try.To1(session.Start(ctx, w, r))
-		store.Flush()
+		store.Delete("uid")
+		store.Delete("l-uid")
 		store.Save()
 		return
 	})
