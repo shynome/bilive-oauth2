@@ -1,0 +1,4 @@
+[submodule "pkg/oauth2"]
+	path = pkg/oauth2
+	url = https://github.com/shynome/oauth2
+	branch = features/ed25519-sign-method
