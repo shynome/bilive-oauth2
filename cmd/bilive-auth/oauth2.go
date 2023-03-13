@@ -53,6 +53,8 @@ func initOAuth2Server(db string) *server.Server {
 		return
 	})
 
+	srv.SetClientInfoHandler(server.ClientFormHandler)
+
 	return srv
 }
 
