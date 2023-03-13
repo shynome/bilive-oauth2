@@ -11,6 +11,7 @@ import (
 	"github.com/go-session/session"
 	"github.com/jackc/pgx/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
 	pg "github.com/vgarvardt/go-oauth2-pg/v4"
@@ -56,6 +57,8 @@ func initOAuth2Server(db string) *server.Server {
 }
 
 func registerOAuth2Server(e *echo.Group, srv *server.Server) {
+
+	e.Use(middleware.CORS())
 
 	e.Any("/authorize", func(c echo.Context) (err error) {
 		defer err2.Handle(&err)
