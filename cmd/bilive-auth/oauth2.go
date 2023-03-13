@@ -6,9 +6,11 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/go-oauth2/oauth2/v4/generates"
 	"github.com/go-oauth2/oauth2/v4/manage"
 	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/go-session/session"
+	"github.com/golang-jwt/jwt"
 	"github.com/jackc/pgx/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -18,7 +20,7 @@ import (
 	"github.com/vgarvardt/go-pg-adapter/pgx4adapter"
 )
 
-func initOAuth2Server(db string) *server.Server {
+func initOAuth2Server(db string, key []byte) *server.Server {
 	pgxConn := try.To1(pgx.Connect(context.TODO(), db))
 	adapter := pgx4adapter.NewConn(pgxConn)
 
@@ -30,6 +32,8 @@ func initOAuth2Server(db string) *server.Server {
 
 	clientStore := try.To1(pg.NewClientStore(adapter))
 	manager.MapClientStorage(clientStore)
+
+	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("bilive-auth", key, jwt.SigningMethodEdDSA))
 
 	srv := server.NewDefaultServer(manager)
 	srv.SetUserAuthorizationHandler(func(w http.ResponseWriter, r *http.Request) (userID string, err error) {

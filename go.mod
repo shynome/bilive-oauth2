@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-session/session v3.1.2+incompatible
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/lainio/err2 v0.8.14
@@ -16,8 +17,9 @@ require (
 	nhooyr.io/websocket v1.8.7
 )
 
+replace github.com/go-oauth2/oauth2/v4 => ./pkg/oauth2
+
 require (
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/brotli/go/cbrotli v0.0.0-20230201092028-ed1995b6bda1 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
