@@ -42,7 +42,7 @@
 					target="bilive_{roomid}"
 					on:click={copy}
 				>
-					去直播间{roomid}发送验证弹幕
+					点击去弹幕验证专用直播间{roomid}发送验证弹幕
 				</a>
 			</Clipboard>
 		</div>
