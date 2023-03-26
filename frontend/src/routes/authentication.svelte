@@ -23,6 +23,11 @@
 	<h4>直播间弹幕验证UID</h4>
 	<hr />
 	<div class="desc panel">
+		{#if !roomid}
+			<div class="reconnect">
+				<button disabled>初始化中...</button>
+			</div>
+		{/if}
 		{#if $v.closed}
 			<div class="reconnect">
 				<button on:click={() => $v.connect().catch(() => alert("重连失败"))}>重连</button>
@@ -42,7 +47,7 @@
 					target="bilive_{roomid}"
 					on:click={copy}
 				>
-					点击去弹幕验证专用直播间{roomid}发送验证弹幕
+					点击去直播间{roomid}发送验证弹幕
 				</a>
 			</Clipboard>
 		</div>
