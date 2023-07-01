@@ -3,6 +3,7 @@ build-fo:
 	rm -rf cmd/bilive-auth/build/ && \
 	cp -r frontend/build/ cmd/bilive-auth/build/
 build: build-fo
+	go generate ./...
 	go build ./cmd/bilive-auth/
 sync: build
 	rsync -rP ./frontend/build/ remoon-sh-1:/opt/bilive-auth/frontend
