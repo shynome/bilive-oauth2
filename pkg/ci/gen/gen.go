@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"regexp"
@@ -28,14 +27,28 @@ func main() {
 		if matched := r.MatchString(w); matched {
 			continue
 		}
+		for _, b := range blocks {
+			if strings.Index(w, b) == -1 {
+				continue
+			}
+		}
 		ss = append(ss, w)
 	}
 	s := strings.Join(ss, "|")
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "output file required")
-		os.Exit(1)
-		return
+	f := "../ci.txt"
+	if len(os.Args) >= 2 {
+		f = os.Args[1]
 	}
-	f := os.Args[1]
 	try.To(os.WriteFile(f, []byte(s), os.ModePerm))
+}
+
+var blocks = []string{
+	"狗", "鸡", "死", "干",
+	"娼", "财", "雌", "奸",
+	"公", "寡", "母", "兵",
+	"不", "荡", "斧", "嬖",
+	"奴", "女", "色", "童",
+	"狱", "罂", "刀", "大",
+	"共产", "主义", "精神",
+	"乳",
 }
