@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
 )
 
@@ -17,21 +16,19 @@ import (
 //go:embed dist/danmu.js
 var danmujs []byte
 
-func Run(room string) (r *bufio.Reader, cmd *exec.Cmd, err error) {
-	defer err2.Handle(&err)
-	f := try.To1(savejs2file())
+var f string
+
+func init() {
+	dir := try.To1(os.MkdirTemp("", "bilive-oauth2"))
+	f = filepath.Join(dir, "danmu.js")
+	try.To(os.WriteFile(f, danmujs, os.ModePerm))
+}
+
+func Connect(room string) (r *bufio.Reader, cmd *exec.Cmd) {
 	cmd = exec.Command("bun", "run", f, room)
 	cmdReader, cmdOut := io.Pipe()
 	cmd.Stdout = cmdOut
 	cmd.Stderr = os.Stderr
 	r = bufio.NewReader(cmdReader)
-	return
-}
-
-func savejs2file() (p string, err error) {
-	defer err2.Handle(&err)
-	dir := try.To1(os.MkdirTemp("", "bilive-oauth2"))
-	p = filepath.Join(dir, "danmu.js")
-	try.To(os.WriteFile(p, danmujs, os.ModePerm))
 	return
 }
