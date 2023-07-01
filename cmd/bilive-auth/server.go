@@ -4,6 +4,7 @@ import (
 	"embed"
 	"flag"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 
@@ -23,16 +24,19 @@ var args struct {
 	jwtKey string
 }
 
+var Version = "dev"
+var f = flag.NewFlagSet("bilive-oauth2@"+Version, flag.ExitOnError)
+
 func init() {
-	flag.StringVar(&args.addr, "addr", ":9096", "http server listen addr")
-	flag.StringVar(&args.pg, "pg", "postgres://postgres:postgres@localhost:5432/postgres", "token file db")
-	flag.IntVar(&args.room, "room", 27352037, "room id")
-	flag.StringVar(&args.secret, "secret", xid.New().String(), "cookie secret")
-	flag.StringVar(&args.jwtKey, "jwt-key", "./bilive-jwt-key", "jwt ed25519 private key")
+	f.StringVar(&args.addr, "addr", ":9096", "http server listen addr")
+	f.StringVar(&args.pg, "pg", "postgres://postgres:postgres@localhost:5432/postgres", "token file db")
+	f.IntVar(&args.room, "room", 27352037, "room id")
+	f.StringVar(&args.secret, "secret", xid.New().String(), "cookie secret")
+	f.StringVar(&args.jwtKey, "jwt-key", "./bilive-jwt-key", "jwt ed25519 private key")
 }
 
 func main() {
-	flag.Parse()
+	f.Parse(os.Args[1:])
 
 	e := echo.New()
 
@@ -45,5 +49,6 @@ func main() {
 	registerOAuth2Server(e.Group("/oauth"), srv)
 	registerBiliveServer(e.Group("/bilive"), args.room)
 
+	log.Println(f.Name(), "start")
 	try.To(e.Start(args.addr))
 }
