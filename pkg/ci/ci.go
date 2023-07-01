@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-//go:generate go run ./gen ci.txt
+//disable-go:generate go run ./gen ci.txt
 
 //go:embed ci.txt
 var s string
