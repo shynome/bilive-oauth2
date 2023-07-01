@@ -4,25 +4,23 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/SierraSoftworks/multicast/v2"
 	"github.com/go-session/session"
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
-	"github.com/shynome/bilive"
+	"github.com/shynome/bilive-oauth2/danmu"
 	"github.com/tidwall/buntdb"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
 
-type BiliveMsg struct {
-	CMD bilive.CMD `json:"cmd"`
-}
 type BiliveDanmu struct {
 	Info []any `json:"info"`
 }
@@ -30,9 +28,31 @@ type Config struct {
 	Room int    `json:"room"`
 	Code string `json:"code"`
 }
+type Danmu struct {
+	UID     string
+	Content string
+}
 
 func registerBiliveServer(e *echo.Group, roomid int) {
 	cache := try.To1(buntdb.Open(":memory:"))
+
+	dd := multicast.New[Danmu]()
+
+	r, cmd := danmu.Connect(fmt.Sprintf("%d", roomid))
+	try.To(cmd.Start())
+	go func() {
+		for {
+			line, _ := try.To2(r.ReadLine())
+			go func(line string) {
+				arr := strings.SplitN(line, "|", 2)
+				if len(arr) != 2 {
+					return
+				}
+				dd.C <- Danmu{UID: arr[0], Content: arr[1]}
+			}(string(line))
+		}
+	}()
+
 	e.Any("/pair", func(c echo.Context) (err error) {
 		defer err2.Handle(&err, func() {
 			// log.Println(err)
@@ -44,10 +64,6 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer conn.Close(websocket.StatusAbnormalClosure, "")
-
-		lc := bilive.NewClient(roomid)
-		try.To(lc.Connect())
-		defer lc.Close()
 
 		const ttl = 10 * time.Minute
 		ctx, cancel := context.WithTimeout(ctx, ttl)
@@ -78,59 +94,27 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 		try.To(err)
 		try.To(wsjson.Write(ctx, conn, Config{Room: roomid, Code: vid}))
 
+		done, l := ctx.Done(), dd.Listen()
 		for {
-			_, b := try.To2(lc.Conn.Read(ctx))
-			// fmt.Println(7777)
-			go func(b []byte) {
-				defer err2.Catch(func(err error) {
-					// log.Printf("decode packet %d err: %e", roomid, err)
+			select {
+			case <-done:
+				return
+			case danmu := <-l.C:
+				go wsjson.Write(ctx, conn, BiliveDanmu{
+					Info: []any{
+						[]any{},
+						danmu.Content,
+						[]any{0, "danmu"},
+					},
 				})
-				pkts := try.To1(bilive.DecodePackets(b))
-				for _, pkt := range pkts {
-					go func(pkt *bilive.Packet) {
-						defer err2.Catch(func(err error) {
-						})
-						if pkt.Operation != bilive.OpreationMessage {
-							return
-						}
-						var msg BiliveMsg
-						try.To(json.Unmarshal(pkt.Body, &msg))
-						if msg.CMD != bilive.CMD_DANMU_MSG {
-							return
-						}
-						var danmu BiliveDanmu
-						try.To(json.Unmarshal(pkt.Body, &danmu))
-						go wsjson.Write(ctx, conn, danmu)
-
-						infos := danmu.Info
-						if len(infos) < 3 {
-							return
-						}
-						d, ok := infos[1].(string)
-						if !ok {
-							return
-						}
-
-						if d != vid {
-							return
-						}
-
-						userInfos, ok := infos[2].([]any)
-						if !ok || len(userInfos) < 2 {
-							return
-						}
-						user, ok := userInfos[0].(float64)
-						if !ok {
-							return
-						}
-						uid := fmt.Sprintf("%d", int(user))
-						store.Set("uid", uid)
-						store.Save()
-						cancel()
-					}(pkt)
+				if danmu.Content == vid {
+					store.Set("uid", danmu.UID)
+					store.Save()
+					return
 				}
-			}(b)
+			}
 		}
+		return
 	})
 	e.Any("/whoami", func(c echo.Context) (err error) {
 		defer err2.Handle(&err)
