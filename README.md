@@ -13,6 +13,11 @@ bilibili 直播间弹幕验证, 这是一个 oauth2 server
 - 第三方应用收到 OAuth Code 进行交换获取 JWT Token
 - 第三方应用使用公钥验证 JWT Token 的有效性后提供服务
 
+# 运行依赖
+
+- postgres 数据库
+- bun 连接直播间弹幕
+
 # Todo
 
 - [x] 不应该每次用户验证时创建一个直播间弹幕实例, 应该共用一个, 节省资源, 但当前为了实现简单这样做了
