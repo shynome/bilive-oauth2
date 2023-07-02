@@ -1,4 +1,4 @@
-import { KeepLiveWS } from "bilibili-live-ws/browser";
+import { KeepLiveTCP as KeepLiveWS } from "bilibili-live-ws";
 const argv = process.argv;
 const room = Number(argv[2]);
 if (isNaN(room)) {

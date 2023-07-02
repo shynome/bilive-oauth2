@@ -16,7 +16,7 @@ bilibili 直播间弹幕验证, 这是一个 oauth2 server
 # 运行依赖
 
 - postgres 数据库
-- [bun](https://bun.sh/) 连接直播间弹幕
+- nodejs 连接直播间弹幕
 
 # Todo
 

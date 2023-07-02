@@ -2,6 +2,7 @@ package danmu
 
 import (
 	"bufio"
+	"bytes"
 	_ "embed"
 	"io"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"github.com/lainio/err2/try"
 )
 
-//go:generate bun build  --outdir dist --minify danmu.mjs
+//go:generate esbuild --bundle --platform=node --outdir=dist --minify danmu.mjs
 
 //go:embed dist/danmu.js
 var danmujs []byte
@@ -25,7 +26,8 @@ func init() {
 }
 
 func Connect(room string) (r *bufio.Reader, cmd *exec.Cmd) {
-	cmd = exec.Command("bun", "run", f, room)
+	cmd = exec.Command("node", "-", room)
+	cmd.Stdin = bytes.NewReader(danmujs)
 	cmdReader, cmdOut := io.Pipe()
 	cmd.Stdout = cmdOut
 	cmd.Stderr = os.Stderr
