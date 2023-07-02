@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.7] - 2023-07-02
+
+### Fix
+
+- `KeepLiveTCP` 相较于 `KeepLiveWS` 貌似没有受到 b 站隐藏 UID 和昵称的影响
+
 ## [0.0.6] - 2023-07-02
 
 ### Fix
