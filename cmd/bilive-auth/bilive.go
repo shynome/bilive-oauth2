@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SierraSoftworks/multicast/v2"
 	"github.com/go-session/session"
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
@@ -36,7 +35,7 @@ type Danmu struct {
 func registerBiliveServer(e *echo.Group, roomid int) {
 	cache := try.To1(buntdb.Open(":memory:"))
 
-	dd := multicast.New[Danmu]()
+	dd := NewDisptacher[Danmu]()
 
 	r, cmd := danmu.Connect(fmt.Sprintf("%d", roomid))
 	try.To(cmd.Start())
@@ -48,7 +47,10 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 				if len(arr) != 2 {
 					return
 				}
-				dd.C <- Danmu{UID: arr[0], Content: arr[1]}
+				dd.Dispatch(Danmu{
+					UID:     arr[0],
+					Content: arr[1],
+				})
 			}(string(line))
 		}
 	}()
@@ -92,14 +94,17 @@ func registerBiliveServer(e *echo.Group, roomid int) {
 			return fmt.Errorf("gen vid failed")
 		})
 		try.To(err)
+
+		done, l := ctx.Done(), dd.Listen(vid)
+		defer dd.Free(vid)
+
 		try.To(wsjson.Write(ctx, conn, Config{Room: roomid, Code: vid}))
 
-		done, l := ctx.Done(), dd.Listen()
 		for {
 			select {
 			case <-done:
 				return
-			case danmu := <-l.C:
+			case danmu := <-l:
 				go wsjson.Write(ctx, conn, BiliveDanmu{
 					Info: []any{
 						[]any{},

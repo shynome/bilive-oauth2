@@ -3,7 +3,6 @@ module github.com/shynome/bilive-oauth2
 go 1.20
 
 require (
-	github.com/SierraSoftworks/multicast/v2 v2.0.0
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-session/session v3.1.2+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -37,6 +36,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/tidwall/btree v0.0.0-20191029221954-400434d76274 // indirect
 	github.com/tidwall/gjson v1.12.1 // indirect
 	github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb // indirect
