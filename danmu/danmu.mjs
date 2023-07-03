@@ -65,5 +65,7 @@ async function getAuthBody(roomid) {
     key: key,
   };
 
+  console.error("auth info got");
+
   return encoder("join", inflates, auth);
 }
