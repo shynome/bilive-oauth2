@@ -8,7 +8,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	r, cmd := Connect("24393")
+	r, cmd := Connect("24393", "")
 	try.To(cmd.Start())
 	go func() {
 		for {

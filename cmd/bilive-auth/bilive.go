@@ -32,12 +32,12 @@ type Danmu struct {
 	Content string
 }
 
-func registerBiliveServer(e *echo.Group, roomid int) {
+func registerBiliveServer(e *echo.Group, roomid int, bilipage string) {
 	cache := try.To1(buntdb.Open(":memory:"))
 
 	dd := NewDisptacher[Danmu]()
 
-	r, cmd := danmu.Connect(fmt.Sprintf("%d", roomid))
+	r, cmd := danmu.Connect(fmt.Sprintf("%d", roomid), bilipage)
 	try.To(cmd.Start())
 	go func() {
 		for {

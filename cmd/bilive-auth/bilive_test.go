@@ -21,7 +21,7 @@ func TestRandomHex(t *testing.T) {
 
 func TestDanmu(t *testing.T) {
 	dd := NewDisptacher[Danmu]()
-	r, cmd := danmu.Connect("898286")
+	r, cmd := danmu.Connect("898286", "")
 	try.To(cmd.Start())
 	go func() {
 		for {

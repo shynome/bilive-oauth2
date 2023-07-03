@@ -25,8 +25,8 @@ func init() {
 	try.To(os.WriteFile(f, danmujs, os.ModePerm))
 }
 
-func Connect(room string) (r *bufio.Reader, cmd *exec.Cmd) {
-	cmd = exec.Command("node", "-", room)
+func Connect(room, bilipage string) (r *bufio.Reader, cmd *exec.Cmd) {
+	cmd = exec.Command("node", "-", room, bilipage)
 	cmd.Stdin = bytes.NewReader(danmujs)
 	cmdReader, cmdOut := io.Pipe()
 	cmd.Stdout = cmdOut
