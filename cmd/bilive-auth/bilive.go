@@ -119,7 +119,6 @@ func registerBiliveServer(e *echo.Group, roomid int, bilipage string) {
 				}
 			}
 		}
-		return
 	})
 	e.Any("/whoami", func(c echo.Context) (err error) {
 		defer err2.Handle(&err)
