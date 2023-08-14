@@ -3,7 +3,7 @@ module github.com/shynome/bilive-oauth2
 go 1.20
 
 require (
-	github.com/go-oauth2/oauth2/v4 v4.5.2
+	github.com/go-oauth2/oauth2/v4 v4.5.3-0.20230418011512-d1b58c7e6270
 	github.com/go-session/session v3.1.2+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jackc/pgx/v4 v4.18.1
@@ -15,8 +15,6 @@ require (
 	github.com/vgarvardt/go-pg-adapter v1.0.0
 	nhooyr.io/websocket v1.8.7
 )
-
-replace github.com/go-oauth2/oauth2/v4 => ./pkg/oauth2
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
