@@ -1,36 +1,30 @@
 package main
 
 import (
-	"context"
 	"net/http"
 	"net/url"
-	"time"
 
+	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/generates"
 	"github.com/go-oauth2/oauth2/v4/manage"
 	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/go-session/session"
 	"github.com/golang-jwt/jwt"
-	"github.com/jackc/pgx/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
-	pg "github.com/vgarvardt/go-oauth2-pg/v4"
-	"github.com/vgarvardt/go-pg-adapter/pgx4adapter"
+	"github.com/pocketbase/pocketbase"
 )
 
-func initOAuth2Server(db string, key []byte) *server.Server {
-	pgxConn := try.To1(pgx.Connect(context.TODO(), db))
-	adapter := pgx4adapter.NewConn(pgxConn)
+func initOAuth2Server(app *pocketbase.PocketBase, key []byte) *server.Server {
 
 	manager := manage.NewDefaultManager()
 
-	tokenStore := try.To1(pg.NewTokenStore(adapter, pg.WithTokenStoreGCInterval(time.Minute)))
-	defer tokenStore.Close()
+	var tokenStore oauth2.TokenStore
 	manager.MapTokenStorage(tokenStore)
 
-	clientStore := try.To1(pg.NewClientStore(adapter))
+	var clientStore oauth2.ClientStore
 	manager.MapClientStorage(clientStore)
 
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("bilive-auth", key, jwt.SigningMethodEdDSA))
