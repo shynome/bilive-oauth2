@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -103,9 +104,31 @@ func registerOAuth2Server(e *echo.Group, srv *server.Server) {
 		defer err2.Handle(&err)
 		r := c.Request()
 		token := try.To1(srv.ValidationBearerToken(r))
-		return c.JSON(200, map[string]any{
-			"client_id": token.GetClientID(),
-			"user_id":   token.GetUserID(),
+		uid := token.GetUserID()
+		return c.JSON(200, UserInfo{
+			OldUserCheck: OldUserCheck{ClientID: token.GetClientID(), UserID: uid},
+
+			Id:            uid,
+			Name:          uid,
+			Username:      uid,
+			Email:         fmt.Sprintf("%s@bilibili.com", uid),
+			EmailVerified: true,
 		})
 	})
+}
+
+type UserInfo struct {
+	OldUserCheck
+	Id            string `json:"sub"`
+	Name          string `json:"name"`
+	Username      string `json:"preferred_username"`
+	Picture       string `json:"picture"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+}
+
+// 遗留的兼容前端代码
+type OldUserCheck struct {
+	ClientID string `json:"client_id"`
+	UserID   string `json:"user_id"`
 }
