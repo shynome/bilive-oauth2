@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.0] - 2023-09-12
+
+### Add
+
+- 支持作为 PocketBase oidc provider 服务器使用
+
 ## [0.0.8] - 2023-07-03
 
 ### Fix
