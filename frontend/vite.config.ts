@@ -1,11 +1,12 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import { defineConfig } from 'vite'
+import { isoImport } from 'vite-plugin-iso-import'
 
 export default defineConfig({
 	build: {
 		target: 'es2015',
 	},
-	plugins: [sveltekit()],
+	plugins: [isoImport(), sveltekit()],
 	server: {
 		proxy: {
 			'/bilive': {
