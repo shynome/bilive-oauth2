@@ -6,11 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
-	"github.com/go-session/session"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
@@ -20,19 +19,34 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-type BiliveDanmu struct {
-	Info []any `json:"info"`
-}
 type Config struct {
 	Room int    `json:"room"`
 	Code string `json:"code"`
 }
 type Danmu struct {
-	UID     string
-	Content string
+	UID     string `json:"uid"`
+	Content string `json:"content"`
 }
 
-func registerBiliveServer(e *echo.Group, roomid int, bilipage string) {
+type MsgType string
+
+const (
+	MsgInit    MsgType = "init"
+	MsgDanmu   MsgType = "danmu"
+	MsgVerfied MsgType = "verified"
+)
+
+type Msg[T any] struct {
+	Type MsgType `json:"type"`
+	Data T       `json:"data"`
+}
+
+type VerifiedMsg struct {
+	Token string `json:"token"`
+}
+
+func registerBiliveServer(e *echo.Group, privkey []byte, roomid int, bilipage string) {
+	key := try.To1(jwt.ParseEdPrivateKeyFromPEM(privkey))
 	cache := try.To1(buntdb.Open(":memory:"))
 
 	dd := NewDisptacher[Danmu]()
@@ -62,7 +76,6 @@ func registerBiliveServer(e *echo.Group, roomid int, bilipage string) {
 		w, r := c.Response(), c.Request()
 
 		ctx := r.Context()
-		store := try.To1(session.Start(ctx, w, r))
 
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer conn.Close(websocket.StatusAbnormalClosure, "")
@@ -98,52 +111,35 @@ func registerBiliveServer(e *echo.Group, roomid int, bilipage string) {
 		done, l := ctx.Done(), dd.Listen(vid)
 		defer dd.Free(vid)
 
-		try.To(wsjson.Write(ctx, conn, Config{Room: roomid, Code: vid}))
+		try.To(wsjson.Write(ctx, conn, Msg[Config]{
+			Type: MsgInit,
+			Data: Config{Room: roomid, Code: vid},
+		}))
 
 		for {
 			select {
 			case <-done:
 				return
 			case danmu := <-l:
-				go wsjson.Write(ctx, conn, BiliveDanmu{
-					Info: []any{
-						[]any{},
-						danmu.Content,
-						[]any{0, "danmu"},
-					},
+				go wsjson.Write(ctx, conn, Msg[Danmu]{
+					Type: MsgDanmu,
+					Data: danmu,
 				})
 				if danmu.Content == vid {
-					store.Set("uid", danmu.UID)
-					store.Save()
+					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
+						"sub": danmu.UID,
+					})
+					token := try.To1(claims.SignedString(key))
+					wsjson.Write(ctx, conn, Msg[VerifiedMsg]{
+						Type: MsgVerfied,
+						Data: VerifiedMsg{
+							Token: token,
+						},
+					})
 					return
 				}
 			}
 		}
-	})
-	e.Any("/whoami", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
-		w, r := c.Response(), c.Request()
-		ctx := r.Context()
-		store := try.To1(session.Start(ctx, w, r))
-		_uid, ok := store.Get("uid")
-		if !ok {
-			return c.NoContent(http.StatusNotFound)
-		}
-		uid, ok := _uid.(string)
-		if !ok {
-			return c.NoContent(http.StatusNotFound)
-		}
-		return c.String(http.StatusOK, uid)
-	})
-	e.Any("/logout", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
-		w, r := c.Response(), c.Request()
-		ctx := r.Context()
-		store := try.To1(session.Start(ctx, w, r))
-		store.Delete("uid")
-		store.Delete("l-uid")
-		store.Save()
-		return
 	})
 }
 

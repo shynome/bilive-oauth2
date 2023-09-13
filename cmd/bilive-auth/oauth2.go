@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/go-oauth2/oauth2/v4/generates"
@@ -38,24 +38,13 @@ func initOAuth2Server(db string, key []byte) *server.Server {
 
 	srv := server.NewDefaultServer(manager)
 	srv.SetUserAuthorizationHandler(func(w http.ResponseWriter, r *http.Request) (userID string, err error) {
-		defer err2.Handle(&err)
-		store := try.To1(session.Start(r.Context(), w, r))
-
-		uid, ok := store.Get("l-uid")
+		ctx := r.Context()
+		user := ctx.Value(UIDContenxtKey)
+		uid, ok := user.(string)
 		if !ok {
-			if r.Form == nil {
-				try.To(r.ParseForm())
-			}
-			store.Set("ReturnUri", r.Form)
-			try.To(store.Save())
-			http.Redirect(w, r, "/", 302)
-			return
+			return "", echo.NewHTTPError(400, "uid not found")
 		}
-
-		userID = uid.(string)
-		store.Delete("l-uid")
-		try.To(store.Save())
-		return
+		return uid, nil
 	})
 
 	srv.SetClientInfoHandler(server.ClientFormHandler)
@@ -63,30 +52,41 @@ func initOAuth2Server(db string, key []byte) *server.Server {
 	return srv
 }
 
-func registerOAuth2Server(e *echo.Group, srv *server.Server) {
+type contextKey string
+
+const UIDContenxtKey = contextKey("uid")
+
+func registerOAuth2Server(e *echo.Group, key []byte, srv *server.Server) {
+
+	var pubkey = func() crypto.PublicKey {
+		key := try.To1(jwt.ParseEdPrivateKeyFromPEM(key))
+		return key.(crypto.Signer).Public()
+	}()
 
 	e.Use(middleware.CORS())
 
-	e.Any("/authorize", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
-
+	e.GET("/authorize", func(c echo.Context) (err error) {
+		q := c.QueryString()
+		return c.Redirect(302, "/?"+q)
+	})
+	e.POST("/authorize", func(c echo.Context) (err error) {
 		w, r := c.Response(), c.Request()
-		store := try.To1(session.Start(r.Context(), w, r))
-		if form, ok := store.Get("ReturnUri"); ok {
-			r.Form = form.(url.Values)
+		token := c.FormValue("bilive-token")
+		if token == "" {
+			return echo.NewHTTPError(400, "token is required")
 		}
-
-		store.Delete("ReturnUri")
-		try.To(store.Save())
-
-		try.To(srv.HandleAuthorizeRequest(w, r))
-		return
+		claims := new(jwt.StandardClaims)
+		try.To1(jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
+			return pubkey, nil
+		}))
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, UIDContenxtKey, claims.Subject)
+		r = r.WithContext(ctx)
+		return srv.HandleAuthorizeRequest(w, r)
 	})
 	e.Any("/token", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
 		w, r := c.Response(), c.Request()
-		try.To(srv.HandleTokenRequest(w, r))
-		return
+		return srv.HandleTokenRequest(w, r)
 	})
 	e.Any("/allow", func(c echo.Context) (err error) {
 		defer err2.Handle(&err)

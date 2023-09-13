@@ -35,7 +35,7 @@ func init() {
 	f.IntVar(&args.room, "room", 27352037, "room id")
 	f.StringVar(&args.secret, "secret", xid.New().String(), "cookie secret")
 	f.StringVar(&args.jwtKey, "jwt-key", "./bilive-jwt-key", "jwt ed25519 private key")
-	f.StringVar(&args.bilipage, "bilipage", "", "用于获取b站用户信息")
+	f.StringVar(&args.bilipage, "bilipage", "http://127.0.0.1:8080", "用于获取b站用户信息")
 }
 
 func main() {
@@ -49,8 +49,8 @@ func main() {
 
 	var key = try.To1(os.ReadFile(args.jwtKey))
 	srv := initOAuth2Server(args.pg, key)
-	registerOAuth2Server(e.Group("/oauth"), srv)
-	registerBiliveServer(e.Group("/bilive"), args.room, args.bilipage)
+	registerOAuth2Server(e.Group("/oauth"), key, srv)
+	registerBiliveServer(e.Group("/bilive"), key, args.room, args.bilipage)
 
 	log.Println(f.Name(), "start")
 	try.To(e.Start(args.addr))
