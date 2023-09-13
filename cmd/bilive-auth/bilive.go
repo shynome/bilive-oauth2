@@ -20,7 +20,7 @@ import (
 )
 
 type Config struct {
-	Room int    `json:"room"`
+	Room string `json:"room"`
 	Code string `json:"code"`
 }
 type Danmu struct {
@@ -113,7 +113,7 @@ func registerBiliveServer(e *echo.Group, privkey []byte, roomid int, bilipage st
 
 		try.To(wsjson.Write(ctx, conn, Msg[Config]{
 			Type: MsgInit,
-			Data: Config{Room: roomid, Code: vid},
+			Data: Config{Room: fmt.Sprintf("%d", roomid), Code: vid},
 		}))
 
 		for {
