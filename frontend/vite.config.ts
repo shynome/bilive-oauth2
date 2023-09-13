@@ -1,31 +1,19 @@
-import { sveltekit } from "@sveltejs/kit/vite"
-import { defineConfig } from "vitest/config"
-import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfill"
+import { sveltekit } from '@sveltejs/kit/vite'
+import { defineConfig } from 'vite'
+import { isoImport } from 'vite-plugin-iso-import'
 
 export default defineConfig({
-	plugins: [sveltekit()],
-	optimizeDeps: {
-		esbuildOptions: {
-			define: {
-				global: "globalThis",
-			},
-			plugins: [
-				NodeGlobalsPolyfillPlugin({
-					buffer: true,
-				}),
-			],
-		},
+	build: {
+		target: 'es2015',
 	},
-	test: {
-		include: ["src/**/*.{test,spec}.{js,ts}"],
-	},
+	plugins: [isoImport(), sveltekit()],
 	server: {
 		proxy: {
-			"/bilive": {
-				target: "http://127.0.0.1:9096",
+			'/bilive': {
+				target: 'http://127.0.0.1:9096',
 				ws: true,
 			},
-			"/oauth": "http://127.0.0.1:9096",
+			'/oauth': 'http://127.0.0.1:9096',
 		},
 	},
 })

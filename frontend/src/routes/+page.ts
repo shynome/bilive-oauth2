@@ -1,21 +1,30 @@
-import type { Load } from "@sveltejs/kit"
-
 export const ssr = false
 
-export type Data = {
-	whoami: string
+type Info = {
+	/**unix timestamp*/
+	exp: number
+	/**uid */
+	sub: string
 }
 
-console.log("source repo: https://github.com/shynome/bilive-oauth2")
-
-export const load: Load = ({ fetch, depends }) => {
-	depends("app:whoami")
+import { get as getToken } from './token'
+export const load = () => {
+	let token = getToken()
+	if (!token) {
+		return {}
+	}
+	let [_, b] = token.split('.')
+	if (!b) {
+		return {}
+	}
+	let info: Info = JSON.parse(atob(b))
+	let now = Math.floor(Date.now() / 1e3)
+	if (info.exp < now) {
+		console.error('token is expired')
+		return {}
+	}
 	return {
-		whoami: fetch("/bilive/whoami").then((r) => {
-			if (r.status !== 200) {
-				return null
-			}
-			return r.text()
-		}),
+		whoami: info.sub,
+		token: token,
 	}
 }

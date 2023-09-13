@@ -13,13 +13,19 @@ bilibili 直播间弹幕验证, 这是一个 oauth2 server
 - 第三方应用收到 OAuth Code 进行交换获取 JWT Token
 - 第三方应用使用公钥验证 JWT Token 的有效性后提供服务
 
+# 作为 OAuth Server 使用
+
+以 PocketBase 的 OpenID Connect provider 为例
+
+| name         | url                                        |
+| ------------ | ------------------------------------------ |
+| Auth URL     | https://bilive-auth.remoon.cn/             |
+| Token URL    | https://bilive-auth.remoon.cn/oauth/token  |
+| User API URL | https://bilive-auth.remoon.cn/oauth/whoami |
+
+ps: 如果你想使用该 OAuth Server, 可手动向我申请
+
 # 运行依赖
 
 - postgres 数据库
 - nodejs 连接直播间弹幕
-
-# Todo
-
-- [x] 已实现共用一个直播弹幕实例. <del>不应该每次用户验证时创建一个直播间弹幕实例, 应该共用一个, 节省资源, 但当前为了实现简单这样做了</del>
-- [ ] 实现 OAuth Server .well-known, 公开公钥方便第三方验证 JWT Token
-      (目前的展示服务器速度不是很理想, 等服务速度稳定后实现该接口, 让其他人也可以使用这个验证服务, 目前的话需要手动向我申请)
