@@ -1,0 +1,6 @@
+<svg viewBox="0 0 800 800" fill="white" xmlns="http://www.w3.org/2000/svg">
+	<rect class="water" width="800" height="800" fill="hsl(194, 100%, 32%)"></rect>
+	<polygon class="shan" points="0,800 0,350 485,800"></polygon>
+	<circle class="re" cx="0" cy="175" r="175"></circle>
+	<circle class="moon" cx="485" cy="315" r="244.99999999999997"></circle>
+</svg>
