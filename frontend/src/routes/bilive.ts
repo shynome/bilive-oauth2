@@ -21,9 +21,11 @@ interface MsgVierfied {
 import { save as saveToken } from './token'
 import { invalidateAll } from '$app/navigation'
 
+import { BROWSER } from 'esm-env'
+
 export const bilive = (() => {
 	let ws: WebSocket
-	let p = 'ws' + new URL('/bilive/pair', location.href).toString().slice('http'.length)
+	let p = ''
 	const { subscribe, update } = writable(
 		{
 			code: '',
@@ -33,7 +35,10 @@ export const bilive = (() => {
 			pending: true,
 		},
 		() => {
-			connect()
+			if (BROWSER) {
+				p = 'ws' + new URL('/bilive/pair', location.href).toString().slice('http'.length)
+				connect()
+			}
 			return () => {
 				if (ws) {
 					ws.close()

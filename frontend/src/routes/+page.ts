@@ -1,4 +1,4 @@
-export const ssr = false
+export const ssr = true
 
 type Info = {
 	/**unix timestamp*/
@@ -8,7 +8,11 @@ type Info = {
 }
 
 import { get as getToken } from './token'
+import { BROWSER } from 'esm-env'
 export const load = () => {
+	if (!BROWSER) {
+		return {}
+	}
 	let token = getToken()
 	if (!token) {
 		return {}
