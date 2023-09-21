@@ -1,4 +1,5 @@
-/Makefile
+/.env
+/Makefile.*
 *_bin
 /bilive-auth
 
