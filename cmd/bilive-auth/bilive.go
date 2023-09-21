@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -45,8 +46,7 @@ type VerifiedMsg struct {
 	Token string `json:"token"`
 }
 
-func registerBiliveServer(e *echo.Group, privkey []byte, roomid int, ch <-chan cmd.Danmu) {
-	key := try.To1(jwt.ParseEdPrivateKeyFromPEM(privkey))
+func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch <-chan cmd.Danmu) {
 	cache := try.To1(buntdb.Open(":memory:"))
 
 	dd := NewDisptacher[Danmu]()
@@ -118,8 +118,13 @@ func registerBiliveServer(e *echo.Group, privkey []byte, roomid int, ch <-chan c
 					Data: danmu,
 				})
 				if danmu.Content == vid {
-					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
-						"sub": danmu.UID,
+					now := time.Now()
+					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
+						Subject:   danmu.UID,
+						Issuer:    "https://bilive-auth.remoon.cn/",
+						IssuedAt:  now.Unix(),
+						NotBefore: now.Unix(),
+						ExpiresAt: now.AddDate(0, 0, 7).Unix(),
 					})
 					token := try.To1(claims.SignedString(key))
 					wsjson.Write(ctx, conn, Msg[VerifiedMsg]{
