@@ -2,16 +2,19 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
@@ -64,14 +67,19 @@ func main() {
 	e.GET("*", echo.WrapHandler(assertHandler))
 
 	var key = try.To1(os.ReadFile(args.jwtKey))
+	privateKey, ok := try.To1(jwt.ParseEdPrivateKeyFromPEM(key)).(ed25519.PrivateKey)
+	if !ok {
+		panic(fmt.Errorf("jwt-key must be ed25519 private key"))
+	}
 	srv := initOAuth2Server(args.pg, key)
 	registerOAuth2Server(e.Group("/oauth"), key, srv)
 
+	var biliApp BiliApp
+	try.To(json.Unmarshal([]byte(args.biliapp), &biliApp))
+	bclient := bilibili.NewClient(biliApp.Key, biliApp.Secret)
+
 	danmuCh := make(chan cmd.Danmu, 1024)
 	{
-		var biliApp BiliApp
-		try.To(json.Unmarshal([]byte(args.biliapp), &biliApp))
-		bclient := bilibili.NewClient(biliApp.Key, biliApp.Secret)
 		ctx := context.Background()
 		getInfo := func() (_ bilibili.WebsocketInfo, err error) {
 			defer err2.Handle(&err)
@@ -127,7 +135,8 @@ func main() {
 		}
 	}
 
-	registerBiliveServer(e.Group("/bilive"), key, args.room, danmuCh)
+	registerBiliveServer(e.Group("/bilive"), privateKey, args.room, danmuCh)
+	registerBilibiliApi(e.Group("/bilibili"), privateKey, bclient, biliApp.ID)
 
 	log.Println(f.Name(), "start")
 	try.To(e.Start(args.addr))
