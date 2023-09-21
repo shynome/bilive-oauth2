@@ -28,4 +28,3 @@ ps: 如果你想使用该 OAuth Server, 可手动向我申请
 # 运行依赖
 
 - postgres 数据库
-- nodejs 连接直播间弹幕
