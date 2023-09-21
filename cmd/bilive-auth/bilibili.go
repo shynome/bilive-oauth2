@@ -29,6 +29,9 @@ func registerBilibiliApi(e *echo.Group, privateKey ed25519.PrivateKey, bclient *
 				return nil, err
 			}
 			claims := token.Claims.(*jwt.StandardClaims)
+			if ok := claims.VerifyAudience("https://open-live.bilibili.com", true); !ok {
+				return nil, fmt.Errorf("用途错误")
+			}
 			if claims.Subject != "root" {
 				return nil, fmt.Errorf("该接口只允许 root 用户访问")
 			}
