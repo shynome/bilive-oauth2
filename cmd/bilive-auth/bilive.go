@@ -6,14 +6,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
-	"github.com/shynome/bilive-oauth2/danmu"
+	"github.com/shynome/openapi-bilibili/live/cmd"
 	"github.com/tidwall/buntdb"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -45,27 +45,19 @@ type VerifiedMsg struct {
 	Token string `json:"token"`
 }
 
-func registerBiliveServer(e *echo.Group, privkey []byte, roomid int, bilipage string) {
+func registerBiliveServer(e *echo.Group, privkey []byte, roomid int, ch <-chan cmd.Danmu) {
 	key := try.To1(jwt.ParseEdPrivateKeyFromPEM(privkey))
 	cache := try.To1(buntdb.Open(":memory:"))
 
 	dd := NewDisptacher[Danmu]()
 
-	r, cmd := danmu.Connect(fmt.Sprintf("%d", roomid), bilipage)
-	try.To(cmd.Start())
 	go func() {
-		for {
-			line, _ := try.To2(r.ReadLine())
-			go func(line string) {
-				arr := strings.SplitN(line, "|", 2)
-				if len(arr) != 2 {
-					return
-				}
-				dd.Dispatch(Danmu{
-					UID:     arr[0],
-					Content: arr[1],
-				})
-			}(string(line))
+		for danmu := range ch {
+			d := Danmu{
+				UID:     strconv.FormatInt(danmu.UID, 10),
+				Content: danmu.Msg,
+			}
+			dd.Dispatch(d)
 		}
 	}()
 

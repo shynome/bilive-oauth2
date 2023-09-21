@@ -1,6 +1,6 @@
 module github.com/shynome/bilive-oauth2
 
-go 1.20
+go 1.21.1
 
 require (
 	github.com/go-oauth2/oauth2/v4 v4.5.3-0.20230418011512-d1b58c7e6270
@@ -10,6 +10,7 @@ require (
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/lainio/err2 v0.8.14
 	github.com/rs/xid v1.4.0
+	github.com/shynome/openapi-bilibili v0.0.5
 	github.com/tidwall/buntdb v1.1.2
 	github.com/vgarvardt/go-oauth2-pg/v4 v4.4.3
 	github.com/vgarvardt/go-pg-adapter v1.0.0
@@ -18,7 +19,7 @@ require (
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/uuid v1.1.1 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -34,6 +35,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/shynome/err0 v0.1.0 // indirect
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/tidwall/btree v0.0.0-20191029221954-400434d76274 // indirect
 	github.com/tidwall/gjson v1.12.1 // indirect
