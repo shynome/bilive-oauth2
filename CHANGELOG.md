@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.0] - 2023-09-22
+
+- 添加 '/bilibili/ws-info' 接口获取直播长连信息, 该接口需验证 jwt token
+
 ## [0.2.1] - 2023-09-21
 
 ### Improve
