@@ -5,6 +5,7 @@
 ### Change
 
 - 使用[B 站官方开发平台的接口](https://open-live.bilibili.com/document/f9ce25be-312e-1f4a-85fd-fef21f1637f8)获取弹幕
+- 运行依赖移除了 nodejs
 
 ## [0.1.1] - 2023-09-13
 
