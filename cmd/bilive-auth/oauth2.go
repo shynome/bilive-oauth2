@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fsnotify/fsnotify"
+	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/generates"
 	"github.com/go-oauth2/oauth2/v4/manage"
-	"github.com/go-oauth2/oauth2/v4/models"
 	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/go-session/session"
@@ -18,12 +17,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
-	"github.com/spf13/viper"
 )
-
-type OAuthConfig struct {
-	Clients []OAuthClient
-}
 
 type OAuthClient struct {
 	ID     string
@@ -31,36 +25,14 @@ type OAuthClient struct {
 	Domain string
 }
 
-func initOAuth2Server(config string, key []byte) *server.Server {
+func initOAuth2Server(clients oauth2.ClientStore, key []byte) *server.Server {
 
 	manager := manage.NewDefaultManager()
 
 	tokenStore := try.To1(store.NewMemoryTokenStore())
 	manager.MapTokenStorage(tokenStore)
 
-	clientStore := store.NewClientStore()
-	manager.MapClientStorage(clientStore)
-
-	var oc OAuthConfig
-	loadClients := func() {
-		for _, c := range oc.Clients {
-			clientStore.Set(c.ID, &models.Client{
-				ID:     c.ID,
-				Secret: c.Secret,
-				Domain: c.Domain,
-			})
-		}
-	}
-	viper.SetConfigName(config)
-	viper.AddConfigPath(".")
-	viper.OnConfigChange(func(in fsnotify.Event) {
-		try.To(viper.Unmarshal(&oc))
-		loadClients()
-	})
-	try.To(viper.ReadInConfig())
-	try.To(viper.Unmarshal(&oc))
-	viper.WatchConfig()
-	loadClients()
+	manager.MapClientStorage(clients)
 
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("bilive-auth", key, jwt.SigningMethodEdDSA))
 
