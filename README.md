@@ -24,7 +24,3 @@ bilibili 直播间弹幕验证, 这是一个 oauth2 server
 | User API URL | https://bilive-auth.remoon.cn/oauth/whoami |
 
 ps: 如果你想使用该 OAuth Server, 可手动向我申请
-
-# 运行依赖
-
-- postgres 数据库

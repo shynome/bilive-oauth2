@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.0] - 2023-11-11
+
+- 移除了数据库依赖, 使用配置文件加载 OAuth Clients
+- 清除了不再使用的 danmu js bridge
+- 升级 openapi-bilibili
+
 ## [0.3.0] - 2023-09-22
 
 - 添加 '/bilibili/ws-info' 接口获取直播长连信息, 该接口需验证 jwt token
