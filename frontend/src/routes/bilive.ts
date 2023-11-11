@@ -24,8 +24,7 @@ import { invalidateAll } from '$app/navigation'
 import { BROWSER } from 'esm-env'
 
 export const bilive = (() => {
-	let ws: WebSocket
-	let p = ''
+	let ws: EventSource
 	const { subscribe, update } = writable(
 		{
 			code: '',
@@ -35,14 +34,12 @@ export const bilive = (() => {
 			pending: true,
 		},
 		() => {
-			if (BROWSER) {
-				p = 'ws' + new URL('/bilive/pair', location.href).toString().slice('http'.length)
-				connect()
+			if (!BROWSER) {
+				return
 			}
+			connect()
 			return () => {
-				if (ws) {
-					ws.close()
-				}
+				ws.close()
 			}
 		},
 	)
@@ -57,18 +54,22 @@ export const bilive = (() => {
 			await new Promise((rl) => setTimeout(rl, 5e2))
 		}
 		if (ws) {
-			ws.onclose = () => 0
 			ws.close()
 		}
-		ws = new WebSocket(p)
-		ws.onclose = function () {
+		ws = new EventSource('/bilive/pair2')
+		// ws.onclose = function () {
+		// 	update((t) => {
+		// 		t.closed = true
+		// 		t.pending = false
+		// 		return t
+		// 	})
+		// }
+		ws.onerror = (e) => {
 			update((t) => {
 				t.closed = true
 				t.pending = false
 				return t
 			})
-		}
-		ws.onerror = (e) => {
 			console.error(e)
 		}
 		ws.onmessage = function (e) {

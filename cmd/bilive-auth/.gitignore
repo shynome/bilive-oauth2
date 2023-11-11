@@ -1,3 +1,4 @@
 /build
 /bilive-jwt-key*
 /bilive-auth.yaml
+/__debug_bin*
