@@ -5,8 +5,12 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -138,6 +142,92 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 			}
 		}
 	})
+
+	e.Any("/pair2", func(c echo.Context) (err error) {
+		defer err2.Handle(&err, func() {
+			log.Println(err)
+		})
+		w, r := c.Response(), c.Request()
+
+		ctx := r.Context()
+
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		const ttl = 10 * time.Minute
+		ctx, cancel := context.WithTimeout(ctx, ttl)
+		defer cancel()
+
+		reader, writer := io.Pipe()
+		stream := StreamWriter{Writer: writer, Flusher: w}
+		go func() {
+			defer cancel()
+			c.Stream(http.StatusOK, "text/event-stream", reader)
+			return
+		}()
+
+		var vid string
+		err = cache.Update(func(tx *buntdb.Tx) (err error) {
+			defer err2.Handle(&err)
+			for i := 0; i < 5; i++ {
+				vid = try.To1(randomHex(8))
+				_, ierr := tx.Get(vid)
+				if errors.Is(ierr, buntdb.ErrNotFound) {
+					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{TTL: ttl})
+					return err
+				}
+			}
+			return fmt.Errorf("gen vid failed")
+		})
+		try.To(err)
+
+		done, l := ctx.Done(), dd.Listen(vid)
+		defer dd.Free(vid)
+
+		msg := Msg[Config]{
+			Type: MsgInit,
+			Data: Config{Room: fmt.Sprintf("%d", roomid), Code: vid},
+		}
+		try.To(msg.Write(stream))
+
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				try.To1(fmt.Fprintf(stream, ": hack for pass cdn \n"))
+				stream.Flush()
+			case danmu := <-l:
+				msg := Msg[Danmu]{
+					Type: MsgDanmu,
+					Data: danmu,
+				}
+				try.To(msg.Write(stream))
+				if danmu.Content == vid {
+					now := time.Now()
+					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
+						Subject:   danmu.UID,
+						Issuer:    "https://bilive-auth.remoon.cn/",
+						IssuedAt:  now.Unix(),
+						NotBefore: now.Unix(),
+						ExpiresAt: now.AddDate(0, 0, 7).Unix(),
+					})
+					token := try.To1(claims.SignedString(key))
+					msg := Msg[VerifiedMsg]{
+						Type: MsgVerfied,
+						Data: VerifiedMsg{
+							Token: token,
+						},
+					}
+					try.To(msg.Write(stream))
+					return
+				}
+			}
+		}
+	})
 }
 
 func randomHex(n int) (string, error) {
@@ -146,4 +236,21 @@ func randomHex(n int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func (msg Msg[T]) Write(w StreamWriter) (err error) {
+	defer w.Flush()
+	id := time.Now().Unix()
+	try.To1(fmt.Fprintf(w, "id:%d\n", id))
+	try.To1(io.WriteString(w, "data:"))
+	try.To(json.NewEncoder(w).Encode(msg))
+	try.To1(io.WriteString(w, "\n"))
+	// 结束该 Event
+	try.To1(io.WriteString(w, "\n"))
+	return nil
+}
+
+type StreamWriter struct {
+	http.Flusher
+	io.Writer
 }
