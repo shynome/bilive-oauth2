@@ -5,34 +5,62 @@ import (
 	"crypto"
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-oauth2/oauth2/v4/generates"
 	"github.com/go-oauth2/oauth2/v4/manage"
+	"github.com/go-oauth2/oauth2/v4/models"
 	"github.com/go-oauth2/oauth2/v4/server"
+	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/go-session/session"
 	"github.com/golang-jwt/jwt"
-	"github.com/jackc/pgx/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
-	pg "github.com/vgarvardt/go-oauth2-pg/v4"
-	"github.com/vgarvardt/go-pg-adapter/pgx4adapter"
+	"github.com/spf13/viper"
 )
 
-func initOAuth2Server(db string, key []byte) *server.Server {
-	pgxConn := try.To1(pgx.Connect(context.TODO(), db))
-	adapter := pgx4adapter.NewConn(pgxConn)
+type OAuthConfig struct {
+	Clients []OAuthClient
+}
+
+type OAuthClient struct {
+	ID     string
+	Secret string
+	Domain string
+}
+
+func initOAuth2Server(config string, key []byte) *server.Server {
 
 	manager := manage.NewDefaultManager()
 
-	tokenStore := try.To1(pg.NewTokenStore(adapter, pg.WithTokenStoreGCInterval(time.Minute)))
-	defer tokenStore.Close()
+	tokenStore := try.To1(store.NewMemoryTokenStore())
 	manager.MapTokenStorage(tokenStore)
 
-	clientStore := try.To1(pg.NewClientStore(adapter))
+	clientStore := store.NewClientStore()
 	manager.MapClientStorage(clientStore)
+
+	var oc OAuthConfig
+	loadClients := func() {
+		for _, c := range oc.Clients {
+			clientStore.Set(c.ID, &models.Client{
+				ID:     c.ID,
+				Secret: c.Secret,
+				Domain: c.Domain,
+			})
+		}
+	}
+	viper.SetConfigName(config)
+	viper.AddConfigPath(".")
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		try.To(viper.Unmarshal(&oc))
+		loadClients()
+	})
+	try.To(viper.ReadInConfig())
+	try.To(viper.Unmarshal(&oc))
+	viper.WatchConfig()
+	loadClients()
 
 	manager.MapAccessGenerate(generates.NewJWTAccessGenerate("bilive-auth", key, jwt.SigningMethodEdDSA))
 

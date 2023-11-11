@@ -29,7 +29,7 @@ var frontendFiles embed.FS
 
 var args struct {
 	addr   string
-	pg     string
+	config string
 	room   int
 	secret string
 	jwtKey string
@@ -49,7 +49,7 @@ var f = flag.NewFlagSet("bilive-oauth2@"+Version, flag.ExitOnError)
 
 func init() {
 	f.StringVar(&args.addr, "addr", ":9096", "http server listen addr")
-	f.StringVar(&args.pg, "pg", "postgres://postgres:postgres@localhost:5432/postgres", "token file db")
+	f.StringVar(&args.config, "config", "bilive-auth", "config file name")
 	f.StringVar(&args.secret, "secret", xid.New().String(), "cookie secret")
 	f.StringVar(&args.jwtKey, "jwt-key", "./bilive-jwt-key", "jwt ed25519 private key")
 	f.IntVar(&args.room, "room", 27352037, "room id")
@@ -71,7 +71,7 @@ func main() {
 	if !ok {
 		panic(fmt.Errorf("jwt-key must be ed25519 private key"))
 	}
-	srv := initOAuth2Server(args.pg, key)
+	srv := initOAuth2Server(args.config, key)
 	registerOAuth2Server(e.Group("/oauth"), key, srv)
 
 	var biliApp BiliApp
