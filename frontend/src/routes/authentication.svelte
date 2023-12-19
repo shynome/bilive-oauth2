@@ -68,16 +68,31 @@
 		</button>
 	</div>
 	<div class="d-block d-sm-none text-center my-3">
-		<input class="form-control my-2 text-center" type="text" readonly value={roomid} />
-		<button
-			class="btn btn-primary"
-			use:copy={roomid}
-			on:svelte-copy={() => {
-				$roomCopied = true
-			}}
-		>
-			{$roomCopied ? '已' : '点击'}复制直播间号
-		</button>
+		<div class="input-group">
+			<input class="form-control text-center" type="text" readonly value={roomid} />
+			<button
+				class="btn btn-primary"
+				use:copy={roomid}
+				on:svelte-copy={() => {
+					$roomCopied = true
+				}}
+			>
+				{$roomCopied ? '已' : ''}复制直播间号
+			</button>
+		</div>
+		<Clipboard let:copy text={$bilive.code}>
+			<a
+				class="btn btn-primary my-2"
+				href="https://live.bilibili.com/{roomid}"
+				target="bilive_{roomid}"
+				on:click={() => {
+					copy()
+				}}
+			>
+				打开上方直播间发送验证弹幕后<br />
+				回到此页面即可看到登录成功
+			</a>
+		</Clipboard>
 	</div>
 	<div class="d-none d-sm-block text-center my-3">
 		<Clipboard let:copy text={$bilive.code}>
