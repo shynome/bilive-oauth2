@@ -10,7 +10,8 @@ require (
 	github.com/labstack/echo-jwt/v4 v4.2.0
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/lainio/err2 v0.8.14
-	github.com/shynome/openapi-bilibili v0.1.0
+	github.com/shynome/err0 v0.1.0
+	github.com/shynome/openapi-bilibili v0.2.0
 	github.com/spf13/viper v1.17.0
 	github.com/tidwall/buntdb v1.1.2
 	nhooyr.io/websocket v1.8.7
@@ -18,7 +19,7 @@ require (
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
-	github.com/google/uuid v1.4.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
@@ -29,7 +30,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/shynome/err0 v0.1.0 // indirect
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
