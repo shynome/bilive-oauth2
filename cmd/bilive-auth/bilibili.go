@@ -12,7 +12,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
+	"github.com/shynome/err0"
 	bilibili "github.com/shynome/openapi-bilibili"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 func registerBilibiliApi(e *echo.Group, privateKey ed25519.PrivateKey, bclient *bilibili.Client, appid int64) {
@@ -54,5 +57,32 @@ func registerBilibiliApi(e *echo.Group, privateKey ed25519.PrivateKey, bclient *
 		defer app.Close()
 		info := app.Info().WebsocketInfo
 		return c.JSON(http.StatusOK, info)
+	})
+
+	e.Any("/ws-info-keep", func(c echo.Context) (err error) {
+		defer err0.Then(&err, nil, nil)
+		IDCode := c.QueryParam("IDCode")
+		if IDCode == "" {
+			return echo.NewHTTPError(400, "require query param: IDCode")
+		}
+		r, w := c.Request(), c.Response()
+		ctx := r.Context()
+		app := try.To1(bclient.Open(ctx, appid, IDCode))
+		defer app.Close()
+		conn := try.To1(websocket.Accept(w, r, nil))
+		defer conn.Close(websocket.StatusAbnormalClosure, "defer manual close")
+		go func() {
+			if err := app.KeepAlive(ctx); err != nil {
+				// do nothing
+			}
+			conn.Close(websocket.StatusAbnormalClosure, err.Error())
+		}()
+		info := app.Info().WebsocketInfo
+		try.To(wsjson.Write(ctx, conn, info))
+		for {
+			if _, _, err := conn.Read(ctx); err != nil {
+				return err
+			}
+		}
 	})
 }
