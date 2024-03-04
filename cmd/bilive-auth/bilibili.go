@@ -72,10 +72,12 @@ func registerBilibiliApi(e *echo.Group, privateKey ed25519.PrivateKey, bclient *
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer conn.Close(websocket.StatusAbnormalClosure, "defer manual close")
 		go func() {
+			var closeMsg = "manual close"
 			if err := app.KeepAlive(ctx); err != nil {
 				// do nothing
+				closeMsg = err.Error()
 			}
-			conn.Close(websocket.StatusAbnormalClosure, err.Error())
+			conn.Close(websocket.StatusAbnormalClosure, closeMsg)
 		}()
 		info := app.Info().WebsocketInfo
 		try.To(wsjson.Write(ctx, conn, info))
