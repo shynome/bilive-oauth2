@@ -21,6 +21,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
+	"github.com/shynome/err0"
 	bilibili "github.com/shynome/openapi-bilibili"
 	"github.com/shynome/openapi-bilibili/live"
 	"github.com/shynome/openapi-bilibili/live/cmd"
@@ -108,13 +109,6 @@ func main() {
 	danmuCh := make(chan cmd.Danmu, 1024)
 	{
 		ctx := context.Background()
-		getInfo := func() (_ bilibili.WebsocketInfo, err error) {
-			defer err2.Handle(&err)
-			app := try.To1(bclient.Open(ctx, biliApp.App, biliApp.Code))
-			try.To(app.Close())
-			info := app.Info().WebsocketInfo
-			return info, nil
-		}
 		linkDanmu := func(data []byte) {
 			defer err2.Catch(func(err error) {
 				log.Println("parse danmu msg failed:", err)
@@ -125,21 +119,18 @@ func main() {
 		}
 		wctx, casue := context.WithCancelCause(ctx)
 		go func() {
-			info := try.To1(getInfo())
-			room := live.RoomWith(info)
-			connect := func() {
+			connect := func() (err error) {
+				defer err0.Then(&err, nil, nil)
 				ctx, cancel := context.WithCancel(ctx)
 				defer cancel()
+				app := try.To1(bclient.Open(ctx, biliApp.App, biliApp.Code))
+				go app.KeepAlive(ctx)
+				defer app.Close()
+				info := app.Info().WebsocketInfo
+				room := live.RoomWith(info)
 				ch, err := room.Connect(ctx)
 				casue(err)
 				if err != nil {
-					if errors.Is(err, live.ErrAuthFailed) {
-						info, err1 := getInfo()
-						if err1 != nil {
-							err = errors.Join(err, err1)
-						}
-						room = live.RoomWith(info)
-					}
 					log.Println("danmu channel connect error", err)
 					return
 				}
@@ -150,6 +141,7 @@ func main() {
 						go linkDanmu(msg.Data)
 					}
 				}
+				return nil
 			}
 			for {
 				connect()
