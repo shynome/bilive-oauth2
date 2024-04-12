@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lainio/err2/try"
+	"github.com/shynome/err0/try"
 )
 
 const link = "https://github.com/pwxcoo/chinese-xinhua/raw/master/data/ci.json"

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/lainio/err2/try"
+	"github.com/shynome/err0/try"
 )
 
 func TestRandomHex(t *testing.T) {

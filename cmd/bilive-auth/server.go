@@ -24,9 +24,8 @@ import (
 	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
 	"github.com/shynome/err0"
+	"github.com/shynome/err0/try"
 	bilibili "github.com/shynome/openapi-bilibili"
 	"github.com/shynome/openapi-bilibili/live"
 	"github.com/shynome/openapi-bilibili/live/cmd"
@@ -123,7 +122,8 @@ func main() {
 	faces := try.To1(buntdb.Open(":memory:"))
 	{
 		linkDanmu := func(data []byte) {
-			defer err2.Catch(func(err error) {
+			var err error
+			defer err0.Then(&err, nil, func() {
 				log.Println("parse danmu msg failed:", err)
 			})
 			var danmu cmd.Danmu

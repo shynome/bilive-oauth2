@@ -18,8 +18,8 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
+	"github.com/shynome/err0"
+	"github.com/shynome/err0/try"
 	"github.com/tidwall/buntdb"
 )
 
@@ -93,7 +93,7 @@ func registerOAuth2Server(db *buntdb.DB, e *echo.Group, key []byte, srv *server.
 		return srv.HandleTokenRequest(w, r)
 	})
 	e.Any("/allow", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
+		defer err0.Then(&err, nil, nil)
 		w, r := c.Response(), c.Request()
 		store := try.To1(session.Start(r.Context(), w, r))
 		uid, ok := store.Get("uid")
@@ -106,7 +106,7 @@ func registerOAuth2Server(db *buntdb.DB, e *echo.Group, key []byte, srv *server.
 	})
 	beer := os.Getenv("BEER")
 	e.Any("/whoami", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
+		defer err0.Then(&err, nil, nil)
 		r := c.Request()
 		token := try.To1(srv.ValidationBearerToken(r))
 		openid := token.GetUserID()

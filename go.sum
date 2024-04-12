@@ -204,8 +204,6 @@ github.com/labstack/echo/v4 v4.10.2 h1:n1jAhnq/elIFTHr1EYpiYtyKgx4RW9ccVgkqByZaN
 github.com/labstack/echo/v4 v4.10.2/go.mod h1:OEyqf2//K1DFdE57vw2DRgWY0M7s65IVQO2FzvI4J5k=
 github.com/labstack/gommon v0.4.0 h1:y7cvthEAEbU0yHOf4axH8ZG2NH8knB9iNSoTO8dyIk8=
 github.com/labstack/gommon v0.4.0/go.mod h1:uW6kP17uPlLJsD3ijUYn3/M5bAxtlZhMI6m3MFxTMTM=
-github.com/lainio/err2 v0.8.14 h1:B6pN8cBlo2Itwrb/aVS5Mbu/CyFxqNFfxjYsU1bko34=
-github.com/lainio/err2 v0.8.14/go.mod h1:5d/fy7+ytZJEybxIPN/LGEfvnU4y+JWE1tZAWRECJqY=
 github.com/leodido/go-urn v1.2.0 h1:hpXL4XnriNwQ/ABnpepYM/1vCLWNDfUNts8dX3xTG6Y=
 github.com/leodido/go-urn v1.2.0/go.mod h1:+8+nEpDfqqsY+g338gtMEUOtuK+4dEMhiQEgxpxOKII=
 github.com/magiconair/properties v1.8.7 h1:IeQXZAiQcpL9mgcAe1Nu6cX9LLw6ExEHKjN0VQdvPDY=
@@ -255,8 +253,6 @@ github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/shynome/err0 v0.1.0 h1:+cWnUkE2kZ9fFTTOrgSkoPzBuSppywI9gd0EFQrFaDw=
 github.com/shynome/err0 v0.1.0/go.mod h1:n5YVOAf8QSa8LMWWFKCXoHQjAjwjywKFiORV/btN3Aw=
-github.com/shynome/openapi-bilibili v0.2.0 h1:eSxWiT4sAFS/sPeXJt32EqDTKNYcez1CUsOt87NJFws=
-github.com/shynome/openapi-bilibili v0.2.0/go.mod h1:pscXMK3Lc4XlRQSTq1aoMtjWxAAd9vs0cIyncAIwpy0=
 github.com/shynome/openapi-bilibili v0.4.0 h1:toFZpPYJjDHzJWH8SDcoKBIlmQpRDsB93E4MC9PVk74=
 github.com/shynome/openapi-bilibili v0.4.0/go.mod h1:pscXMK3Lc4XlRQSTq1aoMtjWxAAd9vs0cIyncAIwpy0=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=

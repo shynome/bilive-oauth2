@@ -9,7 +9,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/labstack/echo-jwt/v4 v4.2.0
 	github.com/labstack/echo/v4 v4.10.2
-	github.com/lainio/err2 v0.8.14
 	github.com/shynome/err0 v0.1.0
 	github.com/shynome/openapi-bilibili v0.4.0
 	github.com/spf13/viper v1.17.0
