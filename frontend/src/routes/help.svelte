@@ -22,7 +22,7 @@
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" />
 			</div>
 			<div class="modal-body">
-				<p>通过直播间弹幕验证你的B站身份(UID), 用在"礼物查询"这些需要UID的应用中</p>
+				<p>通过直播间弹幕验证你的B站身份(OpenID), 用在"礼物查询"这些需要OpenID的应用中</p>
 				<h5>登录流程</h5>
 				<ol>
 					<li>打开页面中指定的直播间</li>
@@ -33,7 +33,7 @@
 				<h5>视频展示</h5>
 				<p>
 					<a
-						href="https://www.bilibili.com/video/BV1EX4y1R7hY/"
+						href="https://www.bilibili.com/video/BV1eG411z7eS/"
 						class="fs-5"
 						target="bilibili-login-example"
 					>

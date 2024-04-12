@@ -10,9 +10,8 @@ import (
 	"github.com/golang-jwt/jwt"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
 	"github.com/shynome/err0"
+	"github.com/shynome/err0/try"
 	bilibili "github.com/shynome/openapi-bilibili"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -43,7 +42,7 @@ func registerBilibiliApi(e *echo.Group, privateKey ed25519.PrivateKey, bclient *
 	}))
 
 	e.Any("/ws-info", func(c echo.Context) (err error) {
-		defer err2.Handle(&err, func() {
+		defer err0.Then(&err, nil, func() {
 			err = echo.NewHTTPError(400, err.Error())
 		})
 		ctx := c.Request().Context()

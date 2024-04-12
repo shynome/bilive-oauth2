@@ -11,13 +11,12 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
+	"github.com/shynome/err0"
+	"github.com/shynome/err0/try"
 	"github.com/shynome/openapi-bilibili/live/cmd"
 	"github.com/tidwall/buntdb"
 	"nhooyr.io/websocket"
@@ -29,8 +28,11 @@ type Config struct {
 	Code string `json:"code"`
 }
 type Danmu struct {
-	UID     string `json:"uid"`
+	OpenID  string `json:"open_id"`
 	Content string `json:"content"`
+}
+
+type BeerDanmu struct {
 }
 
 type MsgType string
@@ -58,7 +60,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 	go func() {
 		for danmu := range ch {
 			d := Danmu{
-				UID:     strconv.FormatInt(danmu.UID, 10),
+				OpenID:  danmu.OpenID,
 				Content: danmu.Msg,
 			}
 			dd.Dispatch(d)
@@ -66,7 +68,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 	}()
 
 	e.Any("/pair", func(c echo.Context) (err error) {
-		defer err2.Handle(&err, func() {
+		defer err0.Then(&err, nil, func() {
 			// log.Println(err)
 		})
 		w, r := c.Response(), c.Request()
@@ -91,12 +93,12 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 
 		var vid string
 		err = cache.Update(func(tx *buntdb.Tx) (err error) {
-			defer err2.Handle(&err)
+			defer err0.Then(&err, nil, nil)
 			for i := 0; i < 5; i++ {
 				vid = try.To1(randomHex(8))
 				_, ierr := tx.Get(vid)
 				if errors.Is(ierr, buntdb.ErrNotFound) {
-					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{TTL: ttl})
+					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{Expires: true, TTL: ttl})
 					return err
 				}
 			}
@@ -124,7 +126,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				if danmu.Content == vid {
 					now := time.Now()
 					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-						Subject:   danmu.UID,
+						Subject:   danmu.OpenID,
 						Issuer:    "https://bilive-auth.remoon.cn/",
 						IssuedAt:  now.Unix(),
 						NotBefore: now.Unix(),
@@ -144,7 +146,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 	})
 
 	e.Any("/pair2", func(c echo.Context) (err error) {
-		defer err2.Handle(&err, func() {
+		defer err0.Then(&err, nil, func() {
 			log.Println(err)
 		})
 		w, r := c.Response(), c.Request()
@@ -168,7 +170,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 
 		var vid string
 		err = cache.Update(func(tx *buntdb.Tx) (err error) {
-			defer err2.Handle(&err)
+			defer err0.Then(&err, nil, nil)
 			for i := 0; i < 5; i++ {
 				vid = try.To1(randomHex(8))
 				_, ierr := tx.Get(vid)
@@ -209,7 +211,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				if danmu.Content == vid {
 					now := time.Now()
 					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-						Subject:   danmu.UID,
+						Subject:   danmu.OpenID,
 						Issuer:    "https://bilive-auth.remoon.cn/",
 						IssuedAt:  now.Unix(),
 						NotBefore: now.Unix(),

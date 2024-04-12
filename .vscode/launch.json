@@ -9,7 +9,10 @@
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/bilive-auth"
+      "program": "${workspaceFolder}/cmd/bilive-auth",
+      "env": {
+        "BEER": "192.168.4.2"
+      }
     }
   ]
 }

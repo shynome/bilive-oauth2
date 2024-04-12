@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"crypto"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/generates"
@@ -15,8 +18,9 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/lainio/err2"
-	"github.com/lainio/err2/try"
+	"github.com/shynome/err0"
+	"github.com/shynome/err0/try"
+	"github.com/tidwall/buntdb"
 )
 
 type OAuthClient struct {
@@ -56,7 +60,7 @@ type contextKey string
 
 const UIDContenxtKey = contextKey("uid")
 
-func registerOAuth2Server(e *echo.Group, key []byte, srv *server.Server) {
+func registerOAuth2Server(db *buntdb.DB, e *echo.Group, key []byte, srv *server.Server) {
 
 	var pubkey = func() crypto.PublicKey {
 		key := try.To1(jwt.ParseEdPrivateKeyFromPEM(key))
@@ -89,7 +93,7 @@ func registerOAuth2Server(e *echo.Group, key []byte, srv *server.Server) {
 		return srv.HandleTokenRequest(w, r)
 	})
 	e.Any("/allow", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
+		defer err0.Then(&err, nil, nil)
 		w, r := c.Response(), c.Request()
 		store := try.To1(session.Start(r.Context(), w, r))
 		uid, ok := store.Get("uid")
@@ -100,20 +104,35 @@ func registerOAuth2Server(e *echo.Group, key []byte, srv *server.Server) {
 		store.Save()
 		return c.Redirect(302, "/oauth/authorize")
 	})
+	beer := os.Getenv("BEER")
 	e.Any("/whoami", func(c echo.Context) (err error) {
-		defer err2.Handle(&err)
+		defer err0.Then(&err, nil, nil)
 		r := c.Request()
 		token := try.To1(srv.ValidationBearerToken(r))
-		uid := token.GetUserID()
-		return c.JSON(200, UserInfo{
+		openid := token.GetUserID()
+		var uid string
+		if beer != "" {
+			db.View(func(tx *buntdb.Tx) (err error) {
+				uid, err = tx.Get(openid)
+				if errors.Is(err, buntdb.ErrNotFound) {
+					time.Sleep(3 * time.Second)
+					uid, err = tx.Get(openid)
+				}
+				return err
+			})
+		}
+		info := UserInfo{
 			OldUserCheck: OldUserCheck{ClientID: token.GetClientID(), UserID: uid},
 
-			Id:            uid,
-			Name:          uid,
-			Username:      uid,
-			Email:         fmt.Sprintf("%s@bilibili.com", uid),
-			EmailVerified: true,
-		})
+			Id:       openid,
+			Name:     uid,
+			Username: openid,
+		}
+		if uid != "" {
+			info.Email = fmt.Sprintf("%s@bilibili.com", uid)
+			info.EmailVerified = true
+		}
+		return c.JSON(200, info)
 	})
 }
 

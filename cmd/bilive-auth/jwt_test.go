@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/lainio/err2/try"
+	"github.com/shynome/err0/try"
 )
 
 //go:embed bilive-jwt-key
