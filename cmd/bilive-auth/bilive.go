@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -29,8 +28,11 @@ type Config struct {
 	Code string `json:"code"`
 }
 type Danmu struct {
-	UID     string `json:"uid"`
+	OpenID  string `json:"open_id"`
 	Content string `json:"content"`
+}
+
+type BeerDanmu struct {
 }
 
 type MsgType string
@@ -58,7 +60,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 	go func() {
 		for danmu := range ch {
 			d := Danmu{
-				UID:     strconv.FormatInt(danmu.UID, 10),
+				OpenID:  danmu.OpenID,
 				Content: danmu.Msg,
 			}
 			dd.Dispatch(d)
@@ -96,7 +98,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				vid = try.To1(randomHex(8))
 				_, ierr := tx.Get(vid)
 				if errors.Is(ierr, buntdb.ErrNotFound) {
-					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{TTL: ttl})
+					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{Expires: true, TTL: ttl})
 					return err
 				}
 			}
@@ -124,7 +126,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				if danmu.Content == vid {
 					now := time.Now()
 					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-						Subject:   danmu.UID,
+						Subject:   danmu.OpenID,
 						Issuer:    "https://bilive-auth.remoon.cn/",
 						IssuedAt:  now.Unix(),
 						NotBefore: now.Unix(),
@@ -209,7 +211,7 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				if danmu.Content == vid {
 					now := time.Now()
 					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-						Subject:   danmu.UID,
+						Subject:   danmu.OpenID,
 						Issuer:    "https://bilive-auth.remoon.cn/",
 						IssuedAt:  now.Unix(),
 						NotBefore: now.Unix(),
