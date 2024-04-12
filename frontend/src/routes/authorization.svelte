@@ -21,7 +21,7 @@
 
 <form method="post" action="/oauth/authorize">
 	<div class="input-group">
-		<input class="form-control text-center" readonly type="text" value="UID已验证 {whoami}" />
+		<input class="form-control text-center" readonly type="text" value="OpenID已验证 {whoami}" />
 		<button
 			type="button"
 			class="btn btn-outline-danger"

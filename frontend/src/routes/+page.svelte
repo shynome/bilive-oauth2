@@ -12,7 +12,7 @@
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title">直播间弹幕验证UID</h5>
+				<h5 class="modal-title">直播间弹幕验证OpenID</h5>
 				<button
 					type="button"
 					class="btn btn-sm"
