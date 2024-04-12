@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-oauth2/oauth2/v4"
@@ -103,20 +104,23 @@ func registerOAuth2Server(db *buntdb.DB, e *echo.Group, key []byte, srv *server.
 		store.Save()
 		return c.Redirect(302, "/oauth/authorize")
 	})
+	beer := os.Getenv("BEER")
 	e.Any("/whoami", func(c echo.Context) (err error) {
 		defer err2.Handle(&err)
 		r := c.Request()
 		token := try.To1(srv.ValidationBearerToken(r))
 		openid := token.GetUserID()
 		var uid string
-		db.View(func(tx *buntdb.Tx) (err error) {
-			uid, err = tx.Get(openid)
-			if errors.Is(err, buntdb.ErrNotFound) {
-				time.Sleep(3 * time.Second)
+		if beer != "" {
+			db.View(func(tx *buntdb.Tx) (err error) {
 				uid, err = tx.Get(openid)
-			}
-			return err
-		})
+				if errors.Is(err, buntdb.ErrNotFound) {
+					time.Sleep(3 * time.Second)
+					uid, err = tx.Get(openid)
+				}
+				return err
+			})
+		}
 		info := UserInfo{
 			OldUserCheck: OldUserCheck{ClientID: token.GetClientID(), UserID: uid},
 
