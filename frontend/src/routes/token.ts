@@ -1,4 +1,4 @@
-const TokenStoreKey = 'oauth-vierified-token'
+const TokenStoreKey = 'oauth-vierified-token-v2'
 
 export const save = (token: string) => {
 	localStorage.setItem(TokenStoreKey, token)
