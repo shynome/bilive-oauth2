@@ -32,6 +32,7 @@ import (
 	"github.com/shynome/openapi-bilibili/live/cmd"
 	"github.com/spf13/viper"
 	"github.com/tidwall/buntdb"
+	"nhooyr.io/websocket"
 )
 
 //go:embed all:build
@@ -190,11 +191,24 @@ func main() {
 	}
 
 	if beer := os.Getenv("BEER"); beer != "" {
+		var WSOpts *websocket.DialOptions
+		if proxy := os.Getenv("BEER_PROXY"); proxy != "" {
+			proxy := try.To1(url.Parse(proxy))
+			client := &http.Client{
+				Transport: &http.Transport{
+					Proxy: http.ProxyURL(proxy),
+				},
+			}
+			WSOpts = &websocket.DialOptions{
+				HTTPClient: client,
+			}
+		}
 		go func() (err error) {
 			connect := func(ctx context.Context) (err error) {
 				defer err0.Then(&err, nil, nil)
 				info := try.To1(getBeerConnectInfo(ctx, beer))
 				room := live.RoomWith(info)
+				room.WSDialOptioins = WSOpts
 				ch := try.To1(room.Connect(ctx))
 				log.Println("野生", "connected")
 				for msg := range ch {
