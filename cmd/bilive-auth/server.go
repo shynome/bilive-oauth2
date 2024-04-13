@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -201,7 +202,9 @@ func main() {
 						continue
 					}
 					go func() (err error) {
-						defer err0.Then(&err, nil, nil)
+						defer err0.Then(&err, nil, func() {
+							slog.Error("解析野生弹幕出错", "err", err)
+						})
 						var list []json.RawMessage
 						try.To(json.Unmarshal(msg.Info, &list))
 						if len(list) == 0 {
@@ -233,7 +236,7 @@ func main() {
 							return db.Update(func(tx *buntdb.Tx) error {
 								uid := fmt.Sprintf("%d", user.UID)
 								_, _, err := tx.Set(openid, uid, nil)
-								log.Println("link", openid, uid)
+								slog.Info("link", "openid", openid, "uid", uid)
 								return err
 							})
 						})
