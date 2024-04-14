@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"crypto"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/generates"
@@ -114,10 +112,6 @@ func registerOAuth2Server(db *buntdb.DB, e *echo.Group, key []byte, srv *server.
 		if beer != "" {
 			db.View(func(tx *buntdb.Tx) (err error) {
 				uid, err = tx.Get(openid)
-				if errors.Is(err, buntdb.ErrNotFound) {
-					time.Sleep(3 * time.Second)
-					uid, err = tx.Get(openid)
-				}
 				return err
 			})
 		}
