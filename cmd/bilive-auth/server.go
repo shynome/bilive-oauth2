@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ed25519"
-	"crypto/tls"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -12,11 +11,10 @@ import (
 	"io/fs"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -33,6 +31,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tidwall/buntdb"
 	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 //go:embed all:build
@@ -121,7 +120,14 @@ func main() {
 	ctx := context.Background()
 	ctx, exit := context.WithCancel(ctx)
 
-	faces := try.To1(buntdb.Open(":memory:"))
+	registerBiliveServer(e.Group("/bilive"), privateKey, biliApp.Room, danmuCh)
+	registerBilibiliApi(db, e.Group("/bilibili"), privateKey, bclient, biliApp.App)
+
+	l := try.To1(net.Listen("tcp", args.addr))
+	defer l.Close()
+	log.Println(f.Name(), "start")
+	go http.Serve(l, e)
+
 	{
 		linkDanmu := func(data []byte) {
 			var err error
@@ -130,39 +136,27 @@ func main() {
 			})
 			var danmu cmd.Danmu
 			try.To(json.Unmarshal(data, &danmu))
-			var uid string
-			db.View(func(tx *buntdb.Tx) (err error) {
-				uid, err = tx.Get(danmu.OpenID)
-				return err
-			})
-			if uid == "" {
-				face := danmu.Uface
-				err := faces.View(func(tx *buntdb.Tx) error {
-					_, err := tx.Get(face)
-					return err
-				})
-				if errors.Is(err, buntdb.ErrNotFound) {
-					faces.Update(func(tx *buntdb.Tx) error {
-						_, _, err := tx.Set(face, danmu.OpenID, &buntdb.SetOptions{
-							Expires: true,
-							TTL:     10 * time.Minute,
-						})
-						return err
-					})
-				}
-			}
 			danmuCh <- danmu
 		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
+			Subject:  "root",
+			Audience: "https://open-live.bilibili.com",
+		})
+		tokenStr := try.To1(token.SignedString(privateKey))
+
+		wslink := fmt.Sprintf("http://%s/bilibili/ws-info-keep?IDCode=%s&token=%s", l.Addr().String(), oc.Bilibili.Code, tokenStr)
 		wctx, casue := context.WithCancelCause(ctx)
 		go func() {
 			connect := func(ctx context.Context) (err error) {
 				defer err0.Then(&err, nil, nil)
 				ctx, cancel := context.WithCancel(ctx)
 				defer cancel()
-				app := try.To1(bclient.Open(ctx, biliApp.App, biliApp.Code))
-				go app.KeepAlive(ctx)
-				defer app.Close()
-				info := app.Info().WebsocketInfo
+
+				conn, _ := try.To2(websocket.Dial(ctx, wslink, nil))
+				var info bilibili.WebsocketInfo
+				try.To(wsjson.Read(ctx, conn, &info))
+
 				room := live.RoomWith(info)
 				ch, err := room.Connect(ctx)
 				casue(err)
@@ -180,7 +174,9 @@ func main() {
 				return nil
 			}
 			for {
-				connect(ctx)
+				if err := connect(ctx); err != nil {
+					slog.Error("主连接出错", "err", err)
+				}
 				time.Sleep(time.Second) // 等待1s后再重试, 避免重试过快导致占满资源
 			}
 		}()
@@ -190,190 +186,9 @@ func main() {
 		}
 	}
 
-	if beer := os.Getenv("BEER"); beer != "" {
-		var WSOpts *websocket.DialOptions
-		if proxy := os.Getenv("BEER_PROXY"); proxy != "" {
-			proxy := try.To1(url.Parse(proxy))
-			client := &http.Client{
-				Transport: &http.Transport{
-					Proxy: http.ProxyURL(proxy),
-				},
-			}
-			WSOpts = &websocket.DialOptions{
-				HTTPClient: client,
-			}
-		}
-		go func() (err error) {
-			connect := func(ctx context.Context) (err error) {
-				defer err0.Then(&err, nil, nil)
-				info := try.To1(getBeerConnectInfo(ctx, beer))
-				room := live.RoomWith(info)
-				room.WSDialOptioins = WSOpts
-				ch := try.To1(room.Connect(ctx))
-				log.Println("野生", "connected")
-				for msg := range ch {
-					if msg.Cmd != "DANMU_MSG" {
-						continue
-					}
-					go func() (err error) {
-						defer err0.Then(&err, nil, func() {
-							slog.Error("解析野生弹幕出错", "err", err)
-						})
-						var list []json.RawMessage
-						try.To(json.Unmarshal(msg.Info, &list))
-						if len(list) == 0 {
-							return
-						}
-						var list2 []json.RawMessage
-						try.To(json.Unmarshal(list[0], &list2))
-						if len(list2) < 16 {
-							return
-						}
-						var user struct {
-							YUser `json:"user"`
-						}
-						try.To(json.Unmarshal(list2[15], &user))
-
-						return faces.View(func(tx *buntdb.Tx) error {
-							openid, err := tx.Get(user.Face)
-							if err != nil {
-								return err
-							}
-							var uid string
-							err = db.View(func(tx *buntdb.Tx) (err error) {
-								uid, err = tx.Get(openid)
-								return err
-							})
-							if uid != "" {
-								return nil
-							}
-							return db.Update(func(tx *buntdb.Tx) error {
-								uid := fmt.Sprintf("%d", user.UID)
-								_, _, err := tx.Set(openid, uid, nil)
-								slog.Info("link", "openid", openid, "uid", uid)
-								return err
-							})
-						})
-					}()
-				}
-				return nil
-			}
-			for {
-				connect(ctx)
-				time.Sleep(1 * time.Second) // 等待1s后再重试, 避免重试过快导致占满资源
-			}
-		}()
-	}
-
-	registerBiliveServer(e.Group("/bilive"), privateKey, biliApp.Room, danmuCh)
-	registerBilibiliApi(e.Group("/bilibili"), privateKey, bclient, biliApp.App)
-
 	quit := make(chan os.Signal)
-	go func() {
-		log.Println(f.Name(), "start")
-		err := e.Start(args.addr)
-		log.Println("server start failed", err)
-		quit <- os.Interrupt
-	}()
-
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 	exit()
 
-}
-
-func getBeerConnectInfo(ctx context.Context, beer string) (info bilibili.WebsocketInfo, err error) {
-	defer err0.Then(&err, nil, nil)
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	var uid, buvid string
-	{
-		link := fmt.Sprintf("http://%s/live-cookie", beer)
-		req := try.To1(http.NewRequestWithContext(ctx, http.MethodGet, link, nil))
-		resp := try.To1(http.DefaultClient.Do(req))
-		defer resp.Body.Close()
-		if code := resp.StatusCode; code != 200 {
-			err := fmt.Errorf("resp status code expect 200, but got %d", code)
-			try.To(err)
-		}
-		var data []string
-		try.To(json.NewDecoder(resp.Body).Decode(&data))
-		uid, buvid = data[0], data[1]
-	}
-
-	proxy := try.To1(url.Parse(fmt.Sprintf("http://%s:1080", beer)))
-	hc := &http.Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyURL(proxy),
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
-	var data Data
-	{
-		link := fmt.Sprintf("https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?id=%d&type=0", oc.Bilibili.Room)
-		req := try.To1(http.NewRequestWithContext(ctx, http.MethodGet, link, nil))
-		req.Header.Set("Js.fetch.credentials", "include")
-		resp := try.To1(hc.Do(req))
-		defer resp.Body.Close()
-		if code := resp.StatusCode; code != 200 {
-			err := fmt.Errorf("resp status code expect 200, but got %d", code)
-			try.To(err)
-		}
-		var response bilibili.Response[Data]
-		try.To(json.NewDecoder(resp.Body).Decode(&response))
-		if response.Code != 0 {
-			err := fmt.Errorf("code %d, err: %s", response.Code, response.Message)
-			try.To(err)
-		}
-		data = response.Data
-	}
-
-	var auth = AuthBody{
-		UID:      try.To1(strconv.Atoi(uid)),
-		RoomID:   oc.Bilibili.Room,
-		Ver:      2,
-		BUVID:    buvid,
-		Platform: "web",
-		Type:     2,
-		Token:    data.Token,
-	}
-	info.AuthBody = string(try.To1(json.Marshal(auth)))
-	for _, h := range data.HostList {
-		link := fmt.Sprintf("wss://%s:%d/sub", h.Host, h.WssPort)
-		info.WssLink = append(info.WssLink, link)
-	}
-	return info, nil
-}
-
-type AuthBody struct {
-	UID      int    `json:"uid"`
-	RoomID   int    `json:"roomid"`
-	Ver      int    `json:"protover"`
-	BUVID    string `json:"buvid"`
-	Platform string `json:"platform"`
-	Type     int    `json:"type"`
-	Token    string `json:"key"`
-}
-
-type Data struct {
-	Token    string `json:"token"`
-	HostList []Host `json:"host_list"`
-}
-type Host struct {
-	Host    string `json:"host"`
-	WssPort uint16 `json:"wss_port"`
-}
-
-// 野开用户结构
-type YUser struct {
-	YUserBase `json:"base"`
-
-	UID int64 `json:"uid"`
-}
-
-type YUserBase struct {
-	Face string `json:"face"`
 }
