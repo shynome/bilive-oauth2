@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/generates"
@@ -102,7 +101,6 @@ func registerOAuth2Server(db *buntdb.DB, e *echo.Group, key []byte, srv *server.
 		store.Save()
 		return c.Redirect(302, "/oauth/authorize")
 	})
-	beer := os.Getenv("BEER")
 	e.Any("/whoami", func(c echo.Context) (err error) {
 		defer err0.Then(&err, nil, nil)
 		r := c.Request()
