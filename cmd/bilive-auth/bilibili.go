@@ -102,9 +102,22 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 			}()
 		}
 		for {
-			if _, _, err := conn.Read(ctx); err != nil {
+			var linked LinkedOpenID
+			if err := wsjson.Read(ctx, conn, &linked); err != nil {
 				return err
 			}
+			go func() {
+				var uid string
+				db.View(func(tx *buntdb.Tx) (err error) {
+					uid, err = tx.Get(linked.OpenID)
+					return err
+				})
+				if uid == "" {
+					return
+				}
+				linked.UID = uid
+				wsjson.Write(ctx, conn, linked)
+			}()
 		}
 	})
 }
