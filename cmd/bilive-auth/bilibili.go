@@ -74,7 +74,7 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 		info := app.Info().WebsocketInfo
 		try.To(wsjson.Write(ctx, conn, info))
 		if beer != "" {
-			go link(ctx, db, info)
+			go link(ctx, conn, db, info)
 		}
 		for {
 			if _, _, err := conn.Read(ctx); err != nil {
@@ -102,7 +102,7 @@ func init() {
 	}
 }
 
-func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err error) {
+func link(ctx context.Context, conn *websocket.Conn, db *buntdb.DB, info bilibili.WebsocketInfo) (err error) {
 	logger := slog.With()
 	defer err0.Then(&err, nil, nil)
 	var roomid int
@@ -157,14 +157,18 @@ func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err 
 				defer err0.Then(&err, nil, func() {
 					slog.Error("解析野生弹幕出错", "err", err)
 				})
+				var linked *LinkedOpenID
 				switch msg.Cmd {
 				case "DANMU_MSG":
 					user := try.To1(getYDanmuUser(msg))
-					try.To(linkOpenID(db, user.Face, user.UID))
+					linked = try.To1(linkOpenID(db, user.Face, user.UID))
 				case "SEND_GIFT":
 					var gift YGift
 					try.To(json.Unmarshal(msg.Data, &gift))
-					try.To(linkOpenID(db, gift.Face, gift.UID))
+					linked = try.To1(linkOpenID(db, gift.Face, gift.UID))
+				}
+				if linked != nil {
+					try.To(wsjson.Write(ctx, conn, linked))
 				}
 				return nil
 			}()
@@ -200,7 +204,7 @@ func setFaceOpenID(db *buntdb.DB, face string, openid string) (err error) {
 	})
 }
 
-func linkOpenID(db *buntdb.DB, face string, uidNew int64) (err error) {
+func linkOpenID(db *buntdb.DB, face string, uidNew int64) (linked *LinkedOpenID, err error) {
 	defer err0.Then(&err, nil, nil)
 	var openid string
 	err = faces.View(func(tx *buntdb.Tx) (err error) {
@@ -209,7 +213,7 @@ func linkOpenID(db *buntdb.DB, face string, uidNew int64) (err error) {
 	})
 	// 如果 uid 已设置, 就不会在 faces 中设置 openid
 	if errors.Is(err, buntdb.ErrNotFound) {
-		return nil
+		return nil, nil
 	}
 	try.To(err)
 
@@ -221,15 +225,23 @@ func linkOpenID(db *buntdb.DB, face string, uidNew int64) (err error) {
 
 	// 如果 openid 已经绑定了 uid 跳过. (因为写锁是单发的)
 	if uid != "" {
-		return nil
+		return nil, nil
 	}
 
-	return db.Update(func(tx *buntdb.Tx) error {
+	err = db.Update(func(tx *buntdb.Tx) error {
 		uid := fmt.Sprintf("%d", uidNew)
 		_, _, err := tx.Set(openid, uid, nil)
 		slog.Info("link", "openid", openid, "uid", uid)
 		return err
 	})
+	try.To(err)
+
+	return &LinkedOpenID{OpenID: openid, UID: uid}, nil
+}
+
+type LinkedOpenID struct {
+	OpenID string `json:"openid"`
+	UID    string `json:"uid"`
 }
 
 func getBeerConnectInfo(ctx context.Context, room int) (info bilibili.WebsocketInfo, err error) {
