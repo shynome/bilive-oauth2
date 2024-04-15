@@ -51,6 +51,21 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 		},
 	}))
 
+	dd := NewDisptacher[*LinkedOpenID]()
+	var ddKey uint64 = 0
+	getDDch := func() (ch <-chan *LinkedOpenID, k string) {
+		dd.locker.RLock()
+		defer dd.locker.RUnlock()
+		for {
+			ddKey++
+			k := fmt.Sprintf("%d", ddKey)
+			_, ok := dd.listeners[k]
+			if ok {
+				continue
+			}
+			return dd.Listen(k), k
+		}
+	}
 	e.Any("/ws-info-keep", func(c echo.Context) (err error) {
 		defer err0.Then(&err, nil, nil)
 		IDCode := c.QueryParam("IDCode")
@@ -74,7 +89,17 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 		info := app.Info().WebsocketInfo
 		try.To(wsjson.Write(ctx, conn, info))
 		if beer != "" {
-			go link(ctx, conn, db, info)
+			go link(ctx, dd, IDCode, db, info)
+			ch, k := getDDch()
+			defer dd.Free(k)
+			go func() {
+				for linked := range ch {
+					if linked.roomIDCode != IDCode {
+						continue
+					}
+					wsjson.Write(ctx, conn, linked)
+				}
+			}()
 		}
 		for {
 			if _, _, err := conn.Read(ctx); err != nil {
@@ -102,7 +127,7 @@ func init() {
 	}
 }
 
-func link(ctx context.Context, conn *websocket.Conn, db *buntdb.DB, info bilibili.WebsocketInfo) (err error) {
+func link(ctx context.Context, dd *Dispatcher[*LinkedOpenID], IDCode string, db *buntdb.DB, info bilibili.WebsocketInfo) (err error) {
 	logger := slog.With()
 	defer err0.Then(&err, nil, nil)
 	var roomid int
@@ -168,7 +193,8 @@ func link(ctx context.Context, conn *websocket.Conn, db *buntdb.DB, info bilibil
 					linked = try.To1(linkOpenID(db, gift.Face, gift.UID))
 				}
 				if linked != nil {
-					try.To(wsjson.Write(ctx, conn, linked))
+					linked.roomIDCode = IDCode
+					dd.Dispatch(linked)
 				}
 				return nil
 			}()
@@ -228,8 +254,8 @@ func linkOpenID(db *buntdb.DB, face string, uidNew int64) (linked *LinkedOpenID,
 		return nil, nil
 	}
 
+	uid = fmt.Sprintf("%d", uidNew)
 	err = db.Update(func(tx *buntdb.Tx) error {
-		uid := fmt.Sprintf("%d", uidNew)
 		_, _, err := tx.Set(openid, uid, nil)
 		slog.Info("link", "openid", openid, "uid", uid)
 		return err
@@ -240,6 +266,8 @@ func linkOpenID(db *buntdb.DB, face string, uidNew int64) (linked *LinkedOpenID,
 }
 
 type LinkedOpenID struct {
+	roomIDCode string
+
 	OpenID string `json:"openid"`
 	UID    string `json:"uid"`
 }
