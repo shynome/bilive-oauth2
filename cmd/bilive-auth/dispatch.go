@@ -35,5 +35,7 @@ func (d Dispatcher[T]) Listen(vid string) <-chan T {
 func (d Dispatcher[T]) Free(k string) {
 	d.locker.Lock()
 	defer d.locker.Unlock()
+	ch := d.listeners[k]
+	close(ch)
 	delete(d.listeners, k)
 }
