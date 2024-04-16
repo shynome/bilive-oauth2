@@ -28,8 +28,9 @@ type Config struct {
 	Code string `json:"code"`
 }
 type Danmu struct {
-	OpenID  string `json:"open_id"`
-	Content string `json:"content"`
+	OpenID   string `json:"open_id"`
+	Content  string `json:"content"`
+	Nickname string `json:"nickname"`
 }
 
 type BeerDanmu struct {
@@ -60,8 +61,9 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 	go func() {
 		for danmu := range ch {
 			d := Danmu{
-				OpenID:  danmu.OpenID,
-				Content: danmu.Msg,
+				OpenID:   danmu.OpenID,
+				Content:  danmu.Msg,
+				Nickname: danmu.Username,
 			}
 			dd.Dispatch(d)
 		}
@@ -125,12 +127,15 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				})
 				if danmu.Content == vid {
 					now := time.Now()
-					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-						Subject:   danmu.OpenID,
-						Issuer:    "https://bilive-auth.remoon.cn/",
-						IssuedAt:  now.Unix(),
-						NotBefore: now.Unix(),
-						ExpiresAt: now.AddDate(0, 0, 7).Unix(),
+					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, CustomClaims{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   danmu.OpenID,
+							Issuer:    "https://bilive-auth.remoon.cn/",
+							IssuedAt:  now.Unix(),
+							NotBefore: now.Unix(),
+							ExpiresAt: now.AddDate(0, 0, 7).Unix(),
+						},
+						Nickname: danmu.Nickname,
 					})
 					token := try.To1(claims.SignedString(key))
 					wsjson.Write(ctx, conn, Msg[VerifiedMsg]{
@@ -210,12 +215,15 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 				try.To(msg.Write(stream))
 				if danmu.Content == vid {
 					now := time.Now()
-					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-						Subject:   danmu.OpenID,
-						Issuer:    "https://bilive-auth.remoon.cn/",
-						IssuedAt:  now.Unix(),
-						NotBefore: now.Unix(),
-						ExpiresAt: now.AddDate(0, 0, 7).Unix(),
+					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, CustomClaims{
+						StandardClaims: jwt.StandardClaims{
+							Subject:   danmu.OpenID,
+							Issuer:    "https://bilive-auth.remoon.cn/",
+							IssuedAt:  now.Unix(),
+							NotBefore: now.Unix(),
+							ExpiresAt: now.AddDate(0, 0, 7).Unix(),
+						},
+						Nickname: danmu.Nickname,
 					})
 					token := try.To1(claims.SignedString(key))
 					msg := Msg[VerifiedMsg]{
@@ -255,4 +263,9 @@ func (msg Msg[T]) Write(w StreamWriter) (err error) {
 type StreamWriter struct {
 	http.Flusher
 	io.Writer
+}
+
+type CustomClaims struct {
+	jwt.StandardClaims
+	Nickname string `json:"nickname"`
 }
