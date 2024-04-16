@@ -5,6 +5,7 @@ type Info = {
 	exp: number
 	/**uid */
 	sub: string
+	nickname: string
 }
 
 import { get as getToken } from './token'
@@ -28,7 +29,7 @@ export const load = () => {
 		return {}
 	}
 	return {
-		whoami: info.sub,
+		whoami: info.nickname ?? info.sub,
 		token: token,
 	}
 }
