@@ -18,6 +18,7 @@
 		"@sveltejs/kit": "^1.20.4",
 		"bootstrap": "^5.3.1",
 		"bootstrap-icons": "^1.10.5",
+		"jwt-decode": "^4.0.0",
 		"prettier": "^2.8.0",
 		"prettier-plugin-svelte": "^2.10.1",
 		"svelte": "^4.0.5",
