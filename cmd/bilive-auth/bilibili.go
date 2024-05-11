@@ -99,7 +99,7 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 
 var beer = os.Getenv("BEER")
 var WSOpts *websocket.DialOptions
-var faces = try.To1(buntdb.Open(":memory:"))
+var Unames = try.To1(buntdb.Open(":memory:"))
 
 func init() {
 	if proxy := os.Getenv("BEER_PROXY"); proxy != "" {
@@ -136,11 +136,11 @@ func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err 
 					case cmd.CmdDanmu:
 						var danmu cmd.Danmu
 						try.To(json.Unmarshal(msg.Data, &danmu))
-						setFaceOpenID(db, danmu.Uface, danmu.OpenID)
+						setUnameOpenID(db, danmu.Username, danmu.OpenID)
 					case cmd.CmdGift:
 						var gift cmd.Gift
 						try.To(json.Unmarshal(msg.Data, &gift))
-						setFaceOpenID(db, gift.Uface, gift.OpenID)
+						setUnameOpenID(db, gift.Username, gift.OpenID)
 					}
 				}()
 			}
@@ -174,11 +174,11 @@ func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err 
 				switch msg.Cmd {
 				case "DANMU_MSG":
 					user := try.To1(getYDanmuUser(msg))
-					linked = try.To1(linkOpenID(db, user.Face, user.UID))
+					linked = try.To1(linkOpenID(db, user.Username, user.UID))
 				case "SEND_GIFT":
 					var gift YGift
 					try.To(json.Unmarshal(msg.Data, &gift))
-					linked = try.To1(linkOpenID(db, gift.Face, gift.UID))
+					linked = try.To1(linkOpenID(db, gift.Username, gift.UID))
 				}
 				if linked != nil {
 					// do nothing
@@ -199,7 +199,7 @@ func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err 
 	}
 }
 
-func setFaceOpenID(db *buntdb.DB, face string, openid string) (err error) {
+func setUnameOpenID(db *buntdb.DB, uname string, openid string) (err error) {
 	var uid string
 	db.View(func(tx *buntdb.Tx) (err error) {
 		uid, err = tx.Get(openid)
@@ -208,8 +208,8 @@ func setFaceOpenID(db *buntdb.DB, face string, openid string) (err error) {
 	if uid != "" {
 		return
 	}
-	return faces.Update(func(tx *buntdb.Tx) error {
-		_, _, err := tx.Set(face, openid, &buntdb.SetOptions{
+	return Unames.Update(func(tx *buntdb.Tx) error {
+		_, _, err := tx.Set(uname, openid, &buntdb.SetOptions{
 			Expires: true,
 			TTL:     10 * time.Minute,
 		})
@@ -217,11 +217,11 @@ func setFaceOpenID(db *buntdb.DB, face string, openid string) (err error) {
 	})
 }
 
-func linkOpenID(db *buntdb.DB, face string, uidNew int64) (linked *LinkedOpenID, err error) {
+func linkOpenID(db *buntdb.DB, uname string, uidNew int64) (linked *LinkedOpenID, err error) {
 	defer err0.Then(&err, nil, nil)
 	var openid string
-	err = faces.View(func(tx *buntdb.Tx) (err error) {
-		openid, err = tx.Get(face)
+	err = Unames.View(func(tx *buntdb.Tx) (err error) {
+		openid, err = tx.Get(uname)
 		return err
 	})
 	// 如果 uid 已设置, 就不会在 faces 中设置 openid
@@ -371,10 +371,12 @@ type YUser struct {
 }
 
 type YUserBase struct {
-	Face string `json:"face"`
+	Username string `json:"name"`
+	Face     string `json:"face"`
 }
 
 type YGift struct {
-	Face string `json:"face"`
-	UID  int64  `json:"uid"`
+	Username string `json:"uname"`
+	Face     string `json:"face"`
+	UID      int64  `json:"uid"`
 }
