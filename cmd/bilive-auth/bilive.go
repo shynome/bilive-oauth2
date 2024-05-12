@@ -19,8 +19,6 @@ import (
 	"github.com/shynome/err0/try"
 	"github.com/shynome/openapi-bilibili/live/cmd"
 	"github.com/tidwall/buntdb"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
 )
 
 type Config struct {
@@ -68,87 +66,6 @@ func registerBiliveServer(e *echo.Group, key ed25519.PrivateKey, roomid int, ch 
 			dd.Dispatch(d)
 		}
 	}()
-
-	e.Any("/pair", func(c echo.Context) (err error) {
-		defer err0.Then(&err, nil, func() {
-			// log.Println(err)
-		})
-		w, r := c.Response(), c.Request()
-
-		ctx := r.Context()
-
-		conn := try.To1(websocket.Accept(w, r, nil))
-		defer conn.Close(websocket.StatusAbnormalClosure, "")
-
-		const ttl = 10 * time.Minute
-		ctx, cancel := context.WithTimeout(ctx, ttl)
-		defer cancel()
-
-		go func() { // 修复ws连接一直不断开的问题
-			defer cancel()
-			for {
-				if _, _, err := conn.Read(ctx); err != nil {
-					break
-				}
-			}
-		}()
-
-		var vid string
-		err = cache.Update(func(tx *buntdb.Tx) (err error) {
-			defer err0.Then(&err, nil, nil)
-			for i := 0; i < 5; i++ {
-				vid = try.To1(randomHex(8))
-				_, ierr := tx.Get(vid)
-				if errors.Is(ierr, buntdb.ErrNotFound) {
-					_, _, err := tx.Set(vid, "yes", &buntdb.SetOptions{Expires: true, TTL: ttl})
-					return err
-				}
-			}
-			return fmt.Errorf("gen vid failed")
-		})
-		try.To(err)
-
-		done, l := ctx.Done(), dd.Listen(vid)
-		defer dd.Free(vid)
-
-		try.To(wsjson.Write(ctx, conn, Msg[Config]{
-			Type: MsgInit,
-			Data: Config{Room: fmt.Sprintf("%d", roomid), Code: vid},
-		}))
-
-		for {
-			select {
-			case <-done:
-				return
-			case danmu := <-l:
-				go wsjson.Write(ctx, conn, Msg[Danmu]{
-					Type: MsgDanmu,
-					Data: danmu,
-				})
-				if danmu.Content == vid {
-					now := time.Now()
-					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, CustomClaims{
-						StandardClaims: jwt.StandardClaims{
-							Subject:   danmu.OpenID,
-							Issuer:    "https://bilive-auth.remoon.cn/",
-							IssuedAt:  now.Unix(),
-							NotBefore: now.Unix(),
-							ExpiresAt: now.AddDate(0, 0, 7).Unix(),
-						},
-						Nickname: danmu.Nickname,
-					})
-					token := try.To1(claims.SignedString(key))
-					wsjson.Write(ctx, conn, Msg[VerifiedMsg]{
-						Type: MsgVerfied,
-						Data: VerifiedMsg{
-							Token: token,
-						},
-					})
-					return
-				}
-			}
-		}
-	})
 
 	e.Any("/pair2", func(c echo.Context) (err error) {
 		defer err0.Then(&err, nil, func() {
