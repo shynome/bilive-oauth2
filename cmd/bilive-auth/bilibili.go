@@ -71,7 +71,10 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 			}
 			conn.Close(websocket.StatusAbnormalClosure, closeMsg)
 		}()
-		info := app.Info().WebsocketInfo
+		info := WebsocketInfo{
+			WebsocketInfo: app.Info().WebsocketInfo,
+			GameID:        app.Info().GameInfo.GameId,
+		}
 		try.To(wsjson.Write(ctx, conn, info))
 		if beer != "" {
 			go link(ctx, db, info)
@@ -97,6 +100,11 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 	})
 }
 
+type WebsocketInfo struct {
+	bilibili.WebsocketInfo
+	GameID string `json:"game_id"`
+}
+
 var beer = os.Getenv("BEER")
 var WSOpts *websocket.DialOptions
 var Unames = try.To1(buntdb.Open(":memory:"))
@@ -115,7 +123,7 @@ func init() {
 	}
 }
 
-func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err error) {
+func link(ctx context.Context, db *buntdb.DB, info WebsocketInfo) (err error) {
 	logger := slog.With()
 	defer err0.Then(&err, nil, nil)
 	var roomid int
@@ -125,7 +133,7 @@ func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err 
 		roomid = authBody.RoomID
 		logger = logger.With("room", roomid)
 
-		room := live.RoomWith(info)
+		room := live.RoomWith(info.WebsocketInfo, info.GameID)
 		connect := func() (err error) {
 			defer err0.Then(&err, nil, nil)
 			ch := try.To1(room.Connect(ctx))
@@ -161,7 +169,7 @@ func link(ctx context.Context, db *buntdb.DB, info bilibili.WebsocketInfo) (err 
 	connect := func() (err error) {
 		defer err0.Then(&err, nil, nil)
 		info := try.To1(getBeerConnectInfo(ctx, roomid))
-		room := live.RoomWith(info)
+		room := live.RoomWith(info, "")
 		room.WSDialOptioins = WSOpts
 		ch := try.To1(room.Connect(ctx))
 		logger.Info("野开连接成功")

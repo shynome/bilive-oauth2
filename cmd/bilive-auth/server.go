@@ -154,10 +154,10 @@ func main() {
 				defer cancel()
 
 				conn, _ := try.To2(websocket.Dial(ctx, wslink, nil))
-				var info bilibili.WebsocketInfo
+				var info WebsocketInfo
 				try.To(wsjson.Read(ctx, conn, &info))
 
-				room := live.RoomWith(info)
+				room := live.RoomWith(info.WebsocketInfo, info.GameID)
 				ch, err := room.Connect(ctx)
 				casue(err)
 				if err != nil {
