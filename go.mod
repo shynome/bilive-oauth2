@@ -10,7 +10,7 @@ require (
 	github.com/labstack/echo-jwt/v4 v4.2.0
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/shynome/err0 v0.1.0
-	github.com/shynome/openapi-bilibili v0.4.3
+	github.com/shynome/openapi-bilibili v0.5.0
 	github.com/spf13/viper v1.17.0
 	github.com/tidwall/buntdb v1.1.2
 	nhooyr.io/websocket v1.8.7
