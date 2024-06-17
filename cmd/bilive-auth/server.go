@@ -157,6 +157,7 @@ func main() {
 				var info WebsocketInfo
 				try.To(wsjson.Read(ctx, conn, &info))
 
+				mainGameID = info.GameID
 				room := live.RoomWith(info.WebsocketInfo, info.GameID)
 				ch, err := room.Connect(ctx)
 				casue(err)
