@@ -27,6 +27,8 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
+var mainGameID string
+
 func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.PrivateKey, bclient *bilibili.Client, appid int64) {
 
 	pubkey := privateKey.Public()
@@ -50,6 +52,18 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 			return token, nil
 		},
 	}))
+
+	e.Any("/health", func(c echo.Context) error {
+		ctx := c.Request().Context()
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		heartbeat := bilibili.ApiCall[bilibili.AppKeepAlive, json.RawMessage](bclient, "/v2/app/heartbeat")
+		_, err := heartbeat(ctx, bilibili.AppKeepAlive{GameId: mainGameID})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.String(http.StatusOK, "ok")
+	})
 
 	e.Any("/ws-info-keep", func(c echo.Context) (err error) {
 		defer err0.Then(&err, nil, nil)
