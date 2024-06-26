@@ -62,7 +62,7 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		return c.String(http.StatusOK, "ok")
+		return c.String(http.StatusOK, mainGameID)
 	})
 
 	e.Any("/ws-info-keep", func(c echo.Context) (err error) {
