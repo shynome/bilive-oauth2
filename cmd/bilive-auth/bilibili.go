@@ -185,9 +185,10 @@ func link(ctx context.Context, db *buntdb.DB, info WebsocketInfo) (err error) {
 		}
 		go func() {
 			for {
-				if err := connect(); errors.Is(err, context.Canceled) {
+				if err := context.Cause(ctx); err != nil {
 					return
-				} else if err != nil {
+				}
+				if err := connect(); err != nil {
 					logger.Info("开平连接出错", "err", err)
 				}
 				time.Sleep(time.Second)
@@ -227,9 +228,10 @@ func link(ctx context.Context, db *buntdb.DB, info WebsocketInfo) (err error) {
 	}
 
 	for {
-		if err := connect(); errors.Is(err, context.Canceled) {
+		if err := context.Cause(ctx); err != nil {
 			return nil
-		} else if err != nil {
+		}
+		if err := connect(); err != nil {
 			logger.Error("野开连接出错", "err", err)
 		}
 		time.Sleep(time.Second)
