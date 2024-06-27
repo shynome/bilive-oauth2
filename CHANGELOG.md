@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.9.5] - 2024-06-27
+
+- Docker 镜像 alpine 添加 tzdata 包, 修复 timezone 未定义的问题
+
 ## [0.9.4] - 2024-06-27
 
 - `/ws-info-keep` 将于次日 04:30 断开, 以免风控中断消息推送
