@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.9.6] - 2024-06-28
+
+- 修复重连逻辑, 在 ctx 退出后不继续重连, 而不应该判断错误类型是否为 `context.Canceled`
+
 ## [0.9.5] - 2024-06-27
 
 - Docker 镜像 alpine 添加 tzdata 包, 修复 timezone 未定义的问题
