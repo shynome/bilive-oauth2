@@ -72,18 +72,31 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 			return echo.NewHTTPError(400, "require query param: IDCode")
 		}
 		r, w := c.Request(), c.Response()
+
 		ctx := r.Context()
+		now := time.Now().Add(24 * time.Hour).In(shanghai)
+		deadline := time.Date(now.Year(), now.Month(), now.Day(), 4, 30, 0, 0, shanghai)
+		ctx, cancel := context.WithDeadlineCause(ctx, deadline, errors.New("于预定的次日4:30断开, 请重连"))
+		defer cancel()
+		ctx, cause := context.WithCancelCause(ctx)
+		defer cause(nil)
+
 		app := try.To1(bclient.Open(ctx, appid, IDCode))
 		defer app.Close()
 		conn := try.To1(websocket.Accept(w, r, nil))
-		defer conn.Close(websocket.StatusAbnormalClosure, "defer manual close")
-		go func() {
-			var closeMsg = "manual close"
-			if err := app.KeepAlive(ctx); err != nil {
-				// do nothing
-				closeMsg = err.Error()
+		defer func() {
+			closedMsg := "defer manual close"
+			if err := context.Cause(ctx); !errors.Is(err, context.Canceled) {
+				closedMsg = err.Error()
 			}
-			conn.Close(websocket.StatusAbnormalClosure, closeMsg)
+			conn.Close(websocket.StatusAbnormalClosure, closedMsg)
+		}()
+		go func() {
+			if err := app.KeepAlive(ctx); err != nil {
+				cause(err)
+			} else {
+				cause(nil)
+			}
 		}()
 		info := WebsocketInfo{
 			WebsocketInfo: app.Info().WebsocketInfo,
@@ -113,6 +126,8 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 		}
 	})
 }
+
+var shanghai = try.To1(time.LoadLocation("Asia/Shanghai"))
 
 type WebsocketInfo struct {
 	bilibili.WebsocketInfo
