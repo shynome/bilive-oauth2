@@ -5,6 +5,7 @@
 	import type { PageData } from './$types'
 	export let data: PageData
 	import Help from './help.svelte'
+	import { PUBLIC_TIANJI_BADGE } from '$env/static/public'
 </script>
 
 <Help />
@@ -31,6 +32,11 @@
 					<Danmu />
 				{/if}
 			</div>
+			{#if PUBLIC_TIANJI_BADGE}
+				<div class="modal-footer">
+					<img src={PUBLIC_TIANJI_BADGE} alt="服务状态" height="20" />
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
