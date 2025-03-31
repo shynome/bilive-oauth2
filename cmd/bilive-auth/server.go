@@ -145,7 +145,8 @@ func main() {
 		})
 		tokenStr := try.To1(token.SignedString(privateKey))
 
-		wslink := fmt.Sprintf("http://%s/bilibili/ws-info-keep?IDCode=%s&token=%s", l.Addr().String(), oc.Bilibili.Code, tokenStr)
+		addr := l.Addr().(*net.TCPAddr)
+		wslink := fmt.Sprintf("http://127.0.0.1:%d/bilibili/ws-info-keep?IDCode=%s&token=%s", addr.Port, oc.Bilibili.Code, tokenStr)
 		wctx, casue := context.WithCancelCause(ctx)
 		go func() {
 			connect := func(ctx context.Context) (err error) {
