@@ -66,7 +66,9 @@ func registerBilibiliApi(db *buntdb.DB, e *echo.Group, privateKey ed25519.Privat
 	})
 
 	e.Any("/ws-info-keep", func(c echo.Context) (err error) {
-		defer err0.Then(&err, nil, nil)
+		defer err0.Then(&err, nil, func() {
+			slog.Error("链接出错", "error", err.Error())
+		})
 		IDCode := c.QueryParam("IDCode")
 		if IDCode == "" {
 			return echo.NewHTTPError(400, "require query param: IDCode")
