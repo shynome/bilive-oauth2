@@ -16,8 +16,11 @@ var args struct {
 	Room   int    // 直播间, 虽然身份码可以拿到直播间号, 但还是直接写一下吧
 }
 
+var Version = "dev"
+
 func main() {
 	app := pocketbase.New()
+	app.RootCmd.Version = Version
 
 	{
 		flags := app.RootCmd.PersistentFlags()
