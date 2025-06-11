@@ -79,6 +79,7 @@ func initBilibili(se *core.ServeEvent) (err error) {
 			var info WebsocketInfo
 			try.To(wsjson.Read(ctx, conn, &info))
 
+			mainGameID = info.GameID
 			room := live.RoomWith(info.WebsocketInfo, info.GameID)
 			ch := try.To1(room.Connect(ctx))
 			slog.Info("danmu connected", "game id", info.GameID)
