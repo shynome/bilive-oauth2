@@ -102,7 +102,7 @@ func initBilibili(se *core.ServeEvent) (err error) {
 				}
 			}
 
-			return nil
+			return fmt.Errorf("websocket连接断开")
 		},
 			retry.Attempts(0),
 			retry.MaxDelay(time.Second),
