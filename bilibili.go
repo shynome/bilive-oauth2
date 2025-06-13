@@ -158,6 +158,32 @@ func initBilibili(se *core.ServeEvent) (err error) {
 		}
 		try.To(wsjson.Write(ctx, conn, info))
 
+		// 另起一个连接尝试绑定送礼用户的UID (送礼用户其实不多, 应该不会频繁触发风控, 可以请求下)
+		if linkedClient != nil {
+			go retry.Do(func() (err error) {
+				defer err0.Then(&err, nil, nil)
+				room := live.RoomWith(info.WebsocketInfo, info.GameID)
+				ch := try.To1(room.Connect(ctx))
+				for msg := range ch {
+					go func() {
+						switch msg.Cmd {
+						case cmd.CmdGift:
+							var gift cmd.Gift
+							if err := json.Unmarshal(msg.Data, &gift); err != nil {
+								return
+							}
+							TryLinkUnameUID(e.App, gift.OpenID, gift.Username)
+						}
+					}()
+				}
+				return fmt.Errorf("连接已经断开")
+			},
+				retry.Context(ctx),
+				retry.Attempts(10), // 这是一个辅助进程, 不需要无限重试
+				retry.MaxDelay(time.Second),
+			)
+		}
+
 		logger := e.App.Logger()
 		for {
 			var linked LinkedOpenID
