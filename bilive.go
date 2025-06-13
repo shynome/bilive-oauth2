@@ -93,7 +93,9 @@ func initBiliveServer(se *core.ServeEvent) (err error) {
 						Data: VerifiedMsg{Token: token},
 					}
 					// 只有用户来直播间并验证通过的时候才尝试绑定UID, 被风控搞麻了, 尽量少请求几次接口
-					go TryLinkUnameUID(e.App, danmu.OpenID, danmu.Nickname)
+					if linkedClient != nil {
+						go TryLinkUnameUID(e.App, danmu.OpenID, danmu.Nickname)
+					}
 					msg.WriteTry(stream)
 					return
 				}
