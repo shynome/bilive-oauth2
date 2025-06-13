@@ -78,6 +78,16 @@ func initBilibili(se *core.ServeEvent) (err error) {
 			conn, _ := try.To2(websocket.Dial(ctx, wslink, nil))
 			var info WebsocketInfo
 			try.To(wsjson.Read(ctx, conn, &info))
+			go func() {
+				// websocket 连接丢失时, 关闭连接进行重连
+				defer cancel()
+				for {
+					_, _, err := conn.Read(ctx)
+					if err != nil {
+						return
+					}
+				}
+			}()
 
 			mainGameID = info.GameID
 			room := live.RoomWith(info.WebsocketInfo, info.GameID)
