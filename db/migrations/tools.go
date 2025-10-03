@@ -28,3 +28,7 @@ func addUpdatedFields(fields *core.FieldsList) {
 func getFieldIndex(m *core.Collection, name string) int {
 	return slices.Index(m.Fields.FieldNames(), name)
 }
+
+func getFieldNext(m *core.Collection, name string) int {
+	return getFieldIndex(m, name) + 1
+}
