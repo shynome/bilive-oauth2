@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/generates"
@@ -26,6 +28,7 @@ import (
 	"github.com/shynome/bilive-oauth2/v2/db"
 	"github.com/shynome/err0"
 	"github.com/shynome/err0/try"
+	openbili "github.com/shynome/openapi-bilibili"
 )
 
 func initOAuth2(se *core.ServeEvent) (err error) {
@@ -88,6 +91,67 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		r = r.WithContext(ctx)
 		return srv.HandleAuthorizeRequest(w, r)
 	})
+	eg.GET("/id_code", func(e *core.RequestEvent) (err error) {
+		defer err0.Then(&err, nil, nil)
+		now := time.Now()
+		w, r := e.Response, e.Request
+		code := r.FormValue("Code")
+		if code == "" {
+			return apis.NewBadRequestError("Code is required", nil)
+		}
+
+		ctx := r.Context()
+		game, err := bclient.Open(ctx, args.App, code)
+		if err != nil {
+			var he *openbili.Response[json.RawMessage]
+			if errors.As(err, &he) {
+				msg := he.Error()
+				return apis.NewBadRequestError(msg, err)
+			}
+			return err
+		}
+		game.Close() // 关闭它, 此时已经拿到主播信息了
+
+		anchor := game.Info().AnchorInfo
+		linkeds := try.To1(e.App.FindCachedCollectionByNameOrId(db.TableLinkeds))
+		err = e.App.RunInTransaction(func(tx core.App) error {
+			linked, err := tx.FindFirstRecordByData(db.TableLinkeds, "openid", anchor.OpenID)
+			if err != nil {
+				if !errors.Is(err, sql.ErrNoRows) {
+					return err
+				}
+				linked = core.NewRecord(linkeds)
+				linked.Set("openid", anchor.OpenID)
+			}
+			// 更新信息
+			linked.Set("room", anchor.RoomID)
+			linked.Set("id_code", code)
+			linked.Set("uid", fmt.Sprintf("%d", anchor.UID))
+			linked.Set("uname", anchor.Username)
+			return tx.Save(linked)
+		})
+		try.To(err)
+
+		// 需要验证 Timestamp, 确认是否为用户本人操作的. 因为 Code 可能会被其他应用存储(是的,我也存了), 并不能代表是用户本人在操作
+		if !e.App.IsDev() { // 在开发环境下不验证
+			q := r.URL.Query()
+			if err := bclient.VerifyH5Params(q); err != nil {
+				return apis.NewBadRequestError("参数验证失败", err)
+			}
+			tsInt := try.To1(strconv.ParseInt(q.Get("Timestamp"), 10, 64))
+			t := time.Unix(tsInt, 0)
+			if now.Sub(t) > 20*time.Second {
+				return apis.NewBadRequestError("timestamp 已过期", nil)
+			}
+		}
+
+		ctx = context.WithValue(ctx, UIDContenxtKey, anchor.OpenID)
+		r = r.WithContext(ctx)
+		if err := srv.HandleAuthorizeRequest(w, r); err != nil {
+			return apis.NewBadRequestError("授权处理失败", err)
+		}
+		return nil
+	})
 	eg.Any("/token", func(e *core.RequestEvent) error {
 		w, r := e.Response, e.Request
 		err := srv.HandleTokenRequest(w, r)
@@ -111,9 +175,11 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		r := e.Request
 		toekn := try.To1(srv.ValidationBearerToken(r))
 		openid := toekn.GetUserID()
-		var uid string
+		var uid, id_code, room string
 		if record, err := e.App.FindFirstRecordByData(db.TableLinkeds, "openid", openid); err == nil {
 			uid = record.GetString("uid")
+			id_code = record.GetString("id_code")
+			room = record.GetString("room")
 		}
 		info := UserInfo{
 			OldUserCheck: OldUserCheck{ClientID: toekn.GetClientID(), UserID: uid},
@@ -121,6 +187,8 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			Id:       openid,
 			Name:     uid,
 			Username: openid,
+			IDCode:   id_code,
+			Room:     room,
 		}
 		if uid != "" {
 			info.Email = fmt.Sprintf("%s@bilibili.com", uid)
@@ -144,6 +212,8 @@ type UserInfo struct {
 	Picture       string `json:"picture"`
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
+	IDCode        string `json:"id_code"`
+	Room          string `json:"room"`
 }
 
 // 遗留的兼容前端代码
