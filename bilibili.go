@@ -174,6 +174,20 @@ func initBilibili(se *core.ServeEvent) (err error) {
 								return
 							}
 							TryLinkUnameUID(e.App, gift.OpenID, gift.Username)
+						case cmd.CmdGuard:
+							var guard cmd.Guard
+							if err := json.Unmarshal(msg.Data, &guard); err != nil {
+								return
+							}
+							g := guard.UserInfo
+							TryLinkUnameUID(e.App, g.OpenID, g.Username)
+						case cmd.CmdSuperChat:
+							var sc cmd.SuperChat
+							if err := json.Unmarshal(msg.Data, &sc); err != nil {
+								return
+							}
+							g := sc.UserInfo
+							TryLinkUnameUID(e.App, g.OpenID, g.Username)
 						}
 					}()
 				}
