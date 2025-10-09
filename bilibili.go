@@ -34,9 +34,29 @@ var ps = pubsub.New[string, Danmu](1024)
 func initBilibili(se *core.ServeEvent) (err error) {
 
 	key := ed25519.NewKeyFromSeed(args.jwtKey)
+	pubkey := key.Public()
 	bclient = bilibili.NewClient(args.Key, args.Secret)
 
 	eg := se.Router.Group("/bilibili")
+	eg.BindFunc(func(e *core.RequestEvent) error {
+		auth := getToken(e.Request)
+		if auth == "" {
+			return apis.NewUnauthorizedError("missing token", nil)
+		}
+		claims := new(jwt.RegisteredClaims)
+		p := jwt.NewParser(
+			jwt.WithAudience("https://open-live.bilibili.com"),
+			jwt.WithSubject("root"),
+		)
+		token, err := p.ParseWithClaims(
+			auth, claims,
+			func(t *jwt.Token) (any, error) { return pubkey, nil },
+		)
+		if err != nil || !token.Valid {
+			return apis.NewUnauthorizedError("invalid token", err)
+		}
+		return e.Next()
+	})
 
 	eg.Any("/health", func(e *core.RequestEvent) error {
 		ctx := e.Request.Context()
