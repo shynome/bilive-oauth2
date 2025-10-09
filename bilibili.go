@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ed25519"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -238,6 +239,42 @@ func initBilibili(se *core.ServeEvent) (err error) {
 		}
 	})
 
+	eg.Any("/openid-uid", func(e *core.RequestEvent) (err error) {
+		logger := e.App.Logger()
+		defer err0.Then(&err, nil, nil)
+		w, r := e.Response, e.Request
+		conn := try.To1(websocket.Accept(w, r, nil))
+		ctx := r.Context()
+		for {
+			var linked LinkedOpenID
+			if err := wsjson.Read(ctx, conn, &linked); err != nil {
+				return err
+			}
+			go func() {
+				record, err := e.App.FindFirstRecordByData(db.TableLinkeds, "openid", linked.OpenID)
+				if err != nil {
+					if !errors.Is(err, sql.ErrNoRows) {
+						logger.Warn("查询数据库出错", "linked", linked, "error", err)
+						return
+					}
+					if linked.Uname == "" {
+						return
+					}
+					d := linked.RequestAt.Add(30 * time.Second)
+					ctx, cancel := context.WithDeadline(ctx, d)
+					defer cancel()
+					record, err = TryLinkUnameUIDWithCtx(ctx, e.App, linked.OpenID, linked.Uname)
+					if err != nil {
+						logger.Warn("尝试绑定UID失败", "linked", linked, "error", err)
+						return
+					}
+				}
+				linked.UID = record.GetString("uid")
+				wsjson.Write(ctx, conn, linked)
+			}()
+		}
+	})
+
 	return se.Next()
 }
 
@@ -251,4 +288,7 @@ type WebsocketInfo struct {
 type LinkedOpenID struct {
 	OpenID string `json:"openid"`
 	UID    string `json:"uid"`
+
+	Uname     string    `json:"uname"`
+	RequestAt time.Time `json:"request_at"`
 }

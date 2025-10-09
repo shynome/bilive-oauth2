@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -70,30 +69,36 @@ func FindUID(ctx context.Context, uname string) (_ string, err error) {
 	return "", fmt.Errorf("can't find uid by name %s", uname)
 }
 
-func TryLinkUnameUID(app core.App, openid, uname string) (err error) {
-	defer err0.Then(&err, nil, func() {
-		slog.Error("link uname uid failed", "openid", openid, "uname", uname, "error", err)
-	})
-
-	linkeds := try.To1(app.FindCachedCollectionByNameOrId(db.TableLinkeds))
-	_, err = app.FindFirstRecordByData(linkeds, "openid", openid)
-	if err == nil {
-		return nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-
+func TryLinkUnameUID(app core.App, openid, uname string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	_, err := TryLinkUnameUIDWithCtx(ctx, app, openid, uname)
+	return err
+}
+
+func TryLinkUnameUIDWithCtx(ctx context.Context, app core.App, openid, uname string) (linked *core.Record, err error) {
+	logger := app.Logger()
+	defer err0.Then(&err, nil, func() {
+		logger.Error("link uname uid failed", "openid", openid, "uname", uname, "error", err)
+	})
+
+	linkeds := try.To1(app.FindCachedCollectionByNameOrId(db.TableLinkeds))
+	linked, err = app.FindFirstRecordByData(linkeds, "openid", openid)
+	if err == nil {
+		return linked, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
 	uid := try.To1(FindUID(ctx, uname))
-	linked := core.NewRecord(linkeds)
+	linked = core.NewRecord(linkeds)
 	linked.Set("openid", openid)
 	linked.Set("uname", uname)
 	linked.Set("uid", uid)
 	try.To(app.Save(linked))
-	return nil
+	return linked, nil
 }
 
 type BilibiliResponse[T any] struct {
