@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.0] - 2025-10-09
+
+- 修复: `/bilibili` 的接口 jwt 验证忘记加了, 补上
+- 添加: `/bilibili/openid-uid` 以便查询 openid 对应的 uid
+
 ## [2.1.0] - 2025-10-03
 
 - 添加: 使用身份码(IDCode)登录的支持. 会验证官方签名
