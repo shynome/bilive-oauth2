@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -91,11 +92,11 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		r = r.WithContext(ctx)
 		return srv.HandleAuthorizeRequest(w, r)
 	})
-	eg.GET("/id_code", func(e *core.RequestEvent) (err error) {
+	eg.POST("/id_code", func(e *core.RequestEvent) (err error) {
 		defer err0.Then(&err, nil, nil)
 		now := time.Now()
 		w, r := e.Response, e.Request
-		code := r.FormValue("Code")
+		code := r.FormValue("code")
 		if code == "" {
 			return apis.NewBadRequestError("Code is required", nil)
 		}
@@ -134,7 +135,8 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 
 		// 需要验证 Timestamp, 确认是否为用户本人操作的. 因为 Code 可能会被其他应用存储(是的,我也存了), 并不能代表是用户本人在操作
 		if !e.App.IsDev() { // 在开发环境下不验证
-			q := r.URL.Query()
+			u := try.To1(url.Parse(r.FormValue("redirect_uri")))
+			q := u.Query()
 			if err := bclient.VerifyH5Params(q); err != nil {
 				return apis.NewBadRequestError("参数验证失败", err)
 			}
