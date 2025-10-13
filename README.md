@@ -17,21 +17,22 @@ bilibili 直播间弹幕验证, 这是一个 oauth2 server
 
 以 PocketBase 的 OpenID Connect provider 为例
 
-| name         | url                                        |
-| ------------ | ------------------------------------------ |
-| Auth URL     | https://bilive-auth.remoon.cn/             |
-| Token URL    | https://bilive-auth.remoon.cn/oauth/token  |
-| User API URL | https://bilive-auth.remoon.cn/oauth/whoami |
+| name         | url                                                          |
+| ------------ | ------------------------------------------------------------ |
+| Auth URL     | https://bilive-auth.remoon.cn/                               |
+| Token URL    | https://bilive-auth.remoon.cn/oauth/token (uid@bilibili.com) |
+| User API URL | https://bilive-auth.remoon.cn/oauth/whoami                   |
 
 ps: 如果你想使用该 OAuth Server, 可手动向我申请
 
 # 使用身份码进行认证 (ID Token 中获取用户信息)
 
-| name      | url                                           |
-| --------- | --------------------------------------------- |
-| Auth URL  | https://bilive-auth.remoon.cn/                |
-| Token URL | https://bilive-auth.remoon.cn/oauth/id_code   |
-| JWKS URL  | https://bilive-auth.remoon.cn/oauth/jwks.json |
+| name         | url                                                                                |
+| ------------ | ---------------------------------------------------------------------------------- |
+| Auth URL     | https://bilive-auth.remoon.cn/                                                     |
+| Token URL    | https://bilive-auth.remoon.cn/oauth/id_code                                        |
+| User API URL | https://bilive-auth.remoon.cn/oauth/live-open/user (openid@live-open.bilibili.com) |
+| JWKS URL     | https://bilive-auth.remoon.cn/oauth/jwks.json                                      |
 
 [参考 PocketBase 的 Manual code exchange](https://pocketbase.io/docs/authentication/#authenticate-with-oauth2)
 
