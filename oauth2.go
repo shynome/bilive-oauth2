@@ -215,11 +215,9 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		r := e.Request
 		toekn := try.To1(srv.ValidationBearerToken(r))
 		openid := toekn.GetUserID()
-		var uid, id_code, room string
+		var uid string
 		if record, err := e.App.FindFirstRecordByData(db.TableLinkeds, "openid", openid); err == nil {
 			uid = record.GetString("uid")
-			id_code = record.GetString("id_code")
-			room = record.GetString("room")
 		}
 		info := UserInfo{
 			OldUserCheck: OldUserCheck{ClientID: toekn.GetClientID(), UserID: uid},
@@ -227,8 +225,6 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			Id:       openid,
 			Name:     uid,
 			Username: openid,
-			IDCode:   id_code,
-			Room:     room,
 		}
 		if uid != "" {
 			info.Email = fmt.Sprintf("%s@bilibili.com", uid)
@@ -252,8 +248,6 @@ type UserInfo struct {
 	Picture       string `json:"picture"`
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
-	IDCode        string `json:"id_code"`
-	Room          string `json:"room"`
 }
 
 type OpenIDClaims struct {
