@@ -36,6 +36,14 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 
 	key := ed25519.NewKeyFromSeed(args.jwtKey)
 	pubkey := key.Public()
+	jwk := JWK{
+		Kty: "OKP",
+		Crv: "Ed25519",
+		Use: "sig",
+		Alg: "EdDSA",
+		Kid: "bilive-auth",
+		X:   base64.RawURLEncoding.EncodeToString(pubkey.(ed25519.PublicKey)),
+	}
 
 	manager := manage.NewDefaultManager()
 
@@ -54,7 +62,8 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 	var clients oauth2.ClientStore = &ClientStore{se.App}
 	manager.MapClientStorage(clients)
 
-	manager.MapAccessGenerate(NewJWTAccessGenerate("bilive-auth", key, jwt.SigningMethodEdDSA))
+	gen := NewJWTAccessGenerate(jwk.Kid, key, jwt.SigningMethodEdDSA)
+	manager.MapAccessGenerate(gen)
 
 	srv := server.NewDefaultServer(manager)
 	srv.SetUserAuthorizationHandler(func(w http.ResponseWriter, r *http.Request) (userID string, err error) {
@@ -92,10 +101,10 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		r = r.WithContext(ctx)
 		return srv.HandleAuthorizeRequest(w, r)
 	})
-	eg.POST("/id_code", func(e *core.RequestEvent) (err error) {
+	eg.Any("/id_code", func(e *core.RequestEvent) (err error) {
 		defer err0.Then(&err, nil, nil)
 		now := time.Now()
-		w, r := e.Response, e.Request
+		_, r := e.Response, e.Request
 		code := r.FormValue("code")
 		if code == "" {
 			return apis.NewBadRequestError("Code is required", nil)
@@ -147,12 +156,41 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			}
 		}
 
-		ctx = context.WithValue(ctx, UIDContenxtKey, anchor.OpenID)
-		r = r.WithContext(ctx)
-		if err := srv.HandleAuthorizeRequest(w, r); err != nil {
-			return apis.NewBadRequestError("授权处理失败", err)
+		_, tgr, err := srv.ValidationTokenRequest(r)
+		if err != nil {
+			return apis.NewBadRequestError("验证请求失败", err)
 		}
-		return nil
+
+		claims := &OpenIDClaims{
+			RegisteredClaims: jwt.RegisteredClaims{
+				Audience:  jwt.ClaimStrings{tgr.ClientID},
+				Subject:   anchor.OpenID,
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+			},
+			Name:          anchor.Username,
+			Username:      fmt.Sprintf("%d", anchor.UID),
+			Picture:       anchor.Uface,
+			Email:         fmt.Sprintf("%s@live-open.bilibili.com", anchor.OpenID),
+			EmailVerified: true,
+			Room:          fmt.Sprintf("%d", anchor.RoomID),
+			IDCode:        code,
+		}
+		token, err := gen.OpenIDToken(ctx, claims)
+		if err != nil {
+			return apis.NewBadRequestError("ID Token生成失败", err)
+		}
+		data := map[string]any{
+			"access_token": token,
+			"token_type":   srv.Config.TokenType,
+			"expires_in":   int64(10 * time.Minute / time.Second),
+			"id_token":     token,
+		}
+		return e.JSON(http.StatusOK, data)
+	})
+	eg.Any("/jwks.json", func(e *core.RequestEvent) (err error) {
+		return e.JSON(http.StatusOK, map[string]any{
+			"keys": []JWK{jwk},
+		})
 	})
 	eg.Any("/token", func(e *core.RequestEvent) error {
 		w, r := e.Response, e.Request
@@ -209,6 +247,17 @@ const UIDContenxtKey = contextKey("uid")
 type UserInfo struct {
 	OldUserCheck
 	Id            string `json:"sub"`
+	Name          string `json:"name"`
+	Username      string `json:"preferred_username"`
+	Picture       string `json:"picture"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	IDCode        string `json:"id_code"`
+	Room          string `json:"room"`
+}
+
+type OpenIDClaims struct {
+	jwt.RegisteredClaims
 	Name          string `json:"name"`
 	Username      string `json:"preferred_username"`
 	Picture       string `json:"picture"`
@@ -357,4 +406,27 @@ func (a *JWTAccessGenerate) Token(ctx context.Context, data *oauth2.GenerateBasi
 	}
 
 	return access, refresh, nil
+}
+
+func (a *JWTAccessGenerate) OpenIDToken(ctx context.Context, claims *OpenIDClaims) (string, error) {
+	token := jwt.NewWithClaims(a.SignedMethod, claims)
+	if a.SignedKeyID != "" {
+		token.Header["kid"] = a.SignedKeyID
+	}
+
+	access, err := token.SignedString(a.SignedKey)
+	if err != nil {
+		return "", err
+	}
+
+	return access, nil
+}
+
+type JWK struct {
+	Kty string `json:"kty"`
+	Crv string `json:"crv"`
+	Use string `json:"use,omitempty"`
+	Alg string `json:"alg,omitempty"`
+	Kid string `json:"kid,omitempty"`
+	X   string `json:"x"`
 }
