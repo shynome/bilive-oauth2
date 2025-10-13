@@ -187,6 +187,25 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		}
 		return e.JSON(http.StatusOK, data)
 	})
+	eg.Any("/live-open/user", func(e *core.RequestEvent) (err error) {
+		defer err0.Then(&err, nil, nil)
+		r := e.Request
+		toekn := try.To1(srv.ValidationBearerToken(r))
+		openid := toekn.GetUserID()
+		var uid string
+		if record, err := e.App.FindFirstRecordByData(db.TableLinkeds, "openid", openid); err == nil {
+			uid = record.GetString("uid")
+		}
+		info := UserInfo{
+			OldUserCheck: OldUserCheck{ClientID: toekn.GetClientID(), UserID: uid},
+
+			Id:            openid,
+			Username:      uid,
+			Email:         fmt.Sprintf("%s@live-open.bilibili.com", openid),
+			EmailVerified: true,
+		}
+		return e.JSON(http.StatusOK, info)
+	})
 	eg.Any("/jwks.json", func(e *core.RequestEvent) (err error) {
 		return e.JSON(http.StatusOK, map[string]any{
 			"keys": []JWK{jwk},
