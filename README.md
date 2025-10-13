@@ -24,3 +24,25 @@ bilibili 直播间弹幕验证, 这是一个 oauth2 server
 | User API URL | https://bilive-auth.remoon.cn/oauth/whoami |
 
 ps: 如果你想使用该 OAuth Server, 可手动向我申请
+
+# 使用身份码进行认证 (ID Token 中获取用户信息)
+
+| name      | url                                           |
+| --------- | --------------------------------------------- |
+| Auth URL  | https://bilive-auth.remoon.cn/                |
+| Token URL | https://bilive-auth.remoon.cn/oauth/id_code   |
+| JWKS URL  | https://bilive-auth.remoon.cn/oauth/jwks.json |
+
+[参考 PocketBase 的 Manual code exchange](https://pocketbase.io/docs/authentication/#authenticate-with-oauth2)
+
+```js
+pb.collection("users").authWithOAuth2Code(
+  provider.name,
+  `IDCode`,
+  provider.codeVerifier,
+  redirectURL, // 需是来自B站的链接, 包含 CodeSign, Timestamp, 超过20s将会认证失败
+  {
+    emailVisibility: false,
+  }
+)
+```
