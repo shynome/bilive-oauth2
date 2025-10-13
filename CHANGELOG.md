@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.3.1] - 2025-10-13
+
+- 添加: `/oauth/live-open/user` 端点, 邮箱格式为: `openid@live-open.bilibili.com`
+
 ## [2.3.0] - 2025-10-13
 
 - 修复: 使用身份码(IDCode)登录的支持
