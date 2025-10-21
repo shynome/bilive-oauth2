@@ -143,7 +143,7 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		try.To(err)
 
 		// 需要验证 Timestamp, 确认是否为用户本人操作的. 因为 Code 可能会被其他应用存储(是的,我也存了), 并不能代表是用户本人在操作
-		if !e.App.IsDev() { // 在开发环境下不验证
+		if e.App.Settings().Meta.HideControls { // 在非调试模式下进行验证
 			u := try.To1(url.Parse(r.FormValue("redirect_uri")))
 			q := u.Query()
 			if err := bclient.VerifyH5Params(q); err != nil {
