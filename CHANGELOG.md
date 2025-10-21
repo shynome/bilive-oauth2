@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.2] - 2025-10-21
+
+- 修改: 非调试模式下进行参数验证
+- 修改: 时间参数由 20s 延长至 5m
+
 ## [2.3.1] - 2025-10-13
 
 - 添加: `/oauth/live-open/user` 端点, 邮箱格式为: `openid@live-open.bilibili.com`
