@@ -151,7 +151,7 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			}
 			tsInt := try.To1(strconv.ParseInt(q.Get("Timestamp"), 10, 64))
 			t := time.Unix(tsInt, 0)
-			if now.Sub(t) > 20*time.Second {
+			if now.Sub(t) > 5*time.Minute {
 				return apis.NewBadRequestError("timestamp 已过期", nil)
 			}
 		}
