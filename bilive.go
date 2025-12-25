@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,8 +17,6 @@ import (
 
 func initBiliveServer(se *core.ServeEvent) (err error) {
 	defer err0.Then(&err, nil, nil)
-
-	key := ed25519.NewKeyFromSeed(args.jwtKey)
 
 	vids := try.To1(se.App.FindCachedCollectionByNameOrId(db.TableTmpVIDs))
 
@@ -87,7 +84,7 @@ func initBiliveServer(se *core.ServeEvent) (err error) {
 						},
 						Nickname: danmu.Nickname,
 					})
-					token := try.To1(claims.SignedString(key))
+					token := try.To1(claims.SignedString(privKey))
 					msg := Msg[VerifiedMsg]{
 						Type: MsgVerfied,
 						Data: VerifiedMsg{Token: token},

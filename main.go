@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/ed25519"
+
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/core"
 	_ "github.com/shynome/bilive-oauth2/v2/db/migrations"
 	"github.com/shynome/err0/try"
 )
@@ -21,6 +24,8 @@ type BConfig struct {
 
 var bconfig BConfig
 
+var privKey ed25519.PrivateKey
+
 var Version = "dev"
 
 func main() {
@@ -37,6 +42,11 @@ func main() {
 		flags.StringVar(&args.Code, "code", "", "bilibili Room IDCode")
 		flags.IntVar(&args.Room, "room", 0, "bilibili Room number")
 	}
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		privKey = ed25519.NewKeyFromSeed(args.jwtKey)
+		return e.Next()
+	})
+	initBackdoor(app)
 	app.OnServe().BindFunc(initBilibili) // 必须先初始化此项, 才有 bclient
 	app.OnServe().BindFunc(initBiliveServer)
 	app.OnServe().BindFunc(initOAuth2)

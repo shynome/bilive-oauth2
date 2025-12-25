@@ -6,4 +6,6 @@ const (
 
 	TableClients = "clients"
 	TableTokens  = "tokens"
+
+	TableBackdoor = "backdoor"
 )
