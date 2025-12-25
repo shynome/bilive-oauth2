@@ -29,6 +29,7 @@ import (
 	"github.com/shynome/bilive-oauth2/v2/db"
 	"github.com/shynome/err0"
 	"github.com/shynome/err0/try"
+	bilibili "github.com/shynome/openapi-bilibili"
 	openbili "github.com/shynome/openapi-bilibili"
 )
 
@@ -111,7 +112,7 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		}
 
 		ctx := r.Context()
-		game, err := bclient.Open(ctx, args.App, code)
+		game, err := bclient.Open(ctx, bconfig.App, code)
 		if err != nil {
 			var he *openbili.Response[json.RawMessage]
 			if errors.As(err, &he) {
@@ -142,8 +143,19 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		})
 		try.To(err)
 
+		cid := r.FormValue("client_id")
+		client := try.To1(e.App.FindRecordById(db.TableClients, cid))
+
 		// 需要验证 Timestamp, 确认是否为用户本人操作的. 因为 Code 可能会被其他应用存储(是的,我也存了), 并不能代表是用户本人在操作
-		if e.App.Settings().Meta.HideControls { // 在非调试模式下进行验证
+		if client.GetBool("verify_sign") { // 可以在clients表中设置是否验证签名
+
+			bconfig := bconfig
+			if client.GetString("bname") != "" {
+				raw := client.GetString("bconfig")
+				try.To(json.Unmarshal([]byte(raw), &bconfig)) // 使用进入的应用配置进行参数验证
+			}
+			bclient := bilibili.NewClient(bconfig.Key, bconfig.Secret)
+
 			u := try.To1(url.Parse(r.FormValue("redirect_uri")))
 			q := u.Query()
 			if err := bclient.VerifyH5Params(q); err != nil {

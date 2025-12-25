@@ -28,6 +28,7 @@ import (
 )
 
 var bclient *bilibili.Client
+
 var mainGameID string
 
 var ps = pubsub.New[string, Danmu](1024)
@@ -36,7 +37,7 @@ func initBilibili(se *core.ServeEvent) (err error) {
 
 	key := ed25519.NewKeyFromSeed(args.jwtKey)
 	pubkey := key.Public()
-	bclient = bilibili.NewClient(args.Key, args.Secret)
+	bclient = bilibili.NewClient(bconfig.Key, bconfig.Secret)
 
 	eg := se.Router.Group("/bilibili")
 	eg.BindFunc(func(e *core.RequestEvent) error {
@@ -157,7 +158,7 @@ func initBilibili(se *core.ServeEvent) (err error) {
 		ctx, cause := context.WithCancelCause(ctx)
 		defer cause(nil)
 
-		app := try.To1(bclient.Open(ctx, args.App, IDCode))
+		app := try.To1(bclient.Open(ctx, bconfig.App, IDCode))
 		defer app.Close()
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer func() {

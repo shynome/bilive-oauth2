@@ -9,12 +9,17 @@ import (
 var args struct {
 	jwtKey []byte
 
-	Key    string
-	Secret string
-	App    int64  // 应用 ID
-	Code   string // 身份码
-	Room   int    // 直播间, 虽然身份码可以拿到直播间号, 但还是直接写一下吧
+	Code string // 身份码
+	Room int    // 直播间, 虽然身份码可以拿到直播间号, 但还是直接写一下吧
 }
+
+type BConfig struct {
+	Key    string `json:"key"`
+	Secret string `json:"secret"`
+	App    int64  `json:"app"`
+}
+
+var bconfig BConfig
 
 var Version = "dev"
 
@@ -26,9 +31,9 @@ func main() {
 		flags := app.RootCmd.PersistentFlags()
 		flags.BytesBase64Var(&args.jwtKey, "jwt-key", nil, "jwt ed25519 private key seed")
 
-		flags.StringVar(&args.Key, "key", "", "bilibili App Key")
-		flags.StringVar(&args.Secret, "secret", "", "bilibili App Secret")
-		flags.Int64Var(&args.App, "app", 0, "bilibili App ID")
+		flags.StringVar(&bconfig.Key, "key", "", "bilibili App Key")
+		flags.StringVar(&bconfig.Secret, "secret", "", "bilibili App Secret")
+		flags.Int64Var(&bconfig.App, "app", 0, "bilibili App ID")
 		flags.StringVar(&args.Code, "code", "", "bilibili Room IDCode")
 		flags.IntVar(&args.Room, "room", 0, "bilibili Room number")
 	}
