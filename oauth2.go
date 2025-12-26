@@ -146,15 +146,16 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		cid := r.FormValue("client_id")
 		client := try.To1(e.App.FindRecordById(db.TableClients, cid))
 
+		var openid2 string
 		// 需要验证 Timestamp, 确认是否为用户本人操作的. 因为 Code 可能会被其他应用存储(是的,我也存了), 并不能代表是用户本人在操作
 		if client.GetBool("verify_sign") { // 可以在clients表中设置是否验证签名
 
-			bconfig := bconfig
+			bconfig2 := bconfig
 			if client.GetString("bname") != "" {
 				raw := client.GetString("bconfig")
-				try.To(json.Unmarshal([]byte(raw), &bconfig)) // 使用进入的应用配置进行参数验证
+				try.To(json.Unmarshal([]byte(raw), &bconfig2)) // 使用进入的应用配置进行参数验证
 			}
-			bclient := bilibili.NewClient(bconfig.Key, bconfig.Secret)
+			bclient := bilibili.NewClient(bconfig2.Key, bconfig2.Secret)
 
 			u := try.To1(url.Parse(r.FormValue("redirect_uri")))
 			q := u.Query()
@@ -165,6 +166,13 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			t := time.Unix(tsInt, 0)
 			if now.Sub(t) > 5*time.Minute {
 				return apis.NewBadRequestError("timestamp 已过期", nil)
+			}
+
+			if bconfig2.App != bconfig.App {
+				game := try.To1(bclient.Open(ctx, bconfig.App, code))
+				game.Close()
+				anchor := game.Info().AnchorInfo
+				openid2 = anchor.OpenID
 			}
 		}
 
@@ -196,6 +204,7 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			"token_type":   srv.Config.TokenType,
 			"expires_in":   int64(10 * time.Minute / time.Second),
 			"id_token":     token,
+			"openid2":      openid2,
 		}
 		return e.JSON(http.StatusOK, data)
 	})
