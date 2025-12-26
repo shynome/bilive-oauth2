@@ -125,6 +125,7 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 
 		anchor := game.Info().AnchorInfo
 		linkeds := try.To1(e.App.FindCachedCollectionByNameOrId(db.TableLinkeds))
+		var linkedID string
 		err = e.App.RunInTransaction(func(tx core.App) error {
 			linked, err := tx.FindFirstRecordByData(db.TableLinkeds, "openid", anchor.OpenID)
 			if err != nil {
@@ -139,27 +140,50 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 			linked.Set("id_code", code)
 			linked.Set("uid", fmt.Sprintf("%d", anchor.UID))
 			linked.Set("uname", anchor.Username)
-			return tx.Save(linked)
+			if err := tx.Save(linked); err != nil {
+				return err
+			}
+			linkedID = linked.Id
+			return nil
 		})
 		try.To(err)
 
 		cid := r.FormValue("client_id")
 		client := try.To1(e.App.FindRecordById(db.TableClients, cid))
 
+		bconfig2 := bconfig
+		if client.GetString("bname") != "" {
+			raw := client.GetString("bconfig")
+			try.To(json.Unmarshal([]byte(raw), &bconfig2)) // 使用进入的应用配置进行参数验证
+		}
+		bclient2 := bilibili.NewClient(bconfig2.Key, bconfig2.Secret)
+
 		var openid2 string
+		if app2 := bconfig2.App; app2 != bconfig.App {
+			clinks := try.To1(e.App.FindCachedCollectionByNameOrId(db.TableCLinks))
+			ll := try.To1(e.App.FindAllRecords(clinks, dbx.HashExp{"linked": linkedID, "app": app2}))
+			var l *core.Record
+			if len(ll) == 0 {
+				game := try.To1(bclient2.Open(ctx, app2, code))
+				game.Close()
+				anchor := game.Info().AnchorInfo
+				l = core.NewRecord(clinks)
+				l.Set("linked", linkedID)
+				l.Set("app", app2)
+				l.Set("openid", anchor.OpenID)
+				_ = e.App.Save(l)
+			} else {
+				l = ll[0]
+			}
+			openid2 = l.GetString("openid")
+		}
+
 		// 需要验证 Timestamp, 确认是否为用户本人操作的. 因为 Code 可能会被其他应用存储(是的,我也存了), 并不能代表是用户本人在操作
 		if client.GetBool("verify_sign") { // 可以在clients表中设置是否验证签名
 
-			bconfig2 := bconfig
-			if client.GetString("bname") != "" {
-				raw := client.GetString("bconfig")
-				try.To(json.Unmarshal([]byte(raw), &bconfig2)) // 使用进入的应用配置进行参数验证
-			}
-			bclient := bilibili.NewClient(bconfig2.Key, bconfig2.Secret)
-
 			u := try.To1(url.Parse(r.FormValue("redirect_uri")))
 			q := u.Query()
-			if err := bclient.VerifyH5Params(q); err != nil {
+			if err := bclient2.VerifyH5Params(q); err != nil {
 				return apis.NewBadRequestError("参数验证失败", err)
 			}
 			tsInt := try.To1(strconv.ParseInt(q.Get("Timestamp"), 10, 64))
@@ -168,12 +192,6 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 				return apis.NewBadRequestError("timestamp 已过期", nil)
 			}
 
-			if bconfig2.App != bconfig.App {
-				game := try.To1(bclient.Open(ctx, bconfig.App, code))
-				game.Close()
-				anchor := game.Info().AnchorInfo
-				openid2 = anchor.OpenID
-			}
 		}
 
 		_, tgr, err := srv.ValidationTokenRequest(r)

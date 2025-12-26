@@ -5,6 +5,7 @@ const (
 	TableTmpVIDs = "tmp_vids"
 
 	TableClients = "clients"
+	TableCLinks  = "clinks"
 	TableTokens  = "tokens"
 
 	TableBackdoor = "backdoor"
