@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.5.1] - 2025-12-31
+
+- 修复: 移除默认添加的 pbSecurityHeaders 中间件, 这会导致无法被嵌套进 iframe 中
+
 ## [2.5.0] - 2025-12-27
 
 - 添加: oauth/id_code 现在如果对应的 client 有不同的 bconfig 会返回一个 `openid2` 以便订阅回调快速找到对应的用户
