@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	_ "github.com/shynome/bilive-oauth2/v2/db/migrations"
 	"github.com/shynome/err0/try"
@@ -50,6 +51,12 @@ func main() {
 	app.OnServe().BindFunc(initBilibili) // 必须先初始化此项, 才有 bclient
 	app.OnServe().BindFunc(initBiliveServer)
 	app.OnServe().BindFunc(initOAuth2)
+
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		// 移除默认添加的 X-Frame-Options, 有需要可以在反向代理那添加
+		e.Router.Unbind(apis.DefaultSecurityHeadersMiddlewareId)
+		return e.Next()
+	})
 
 	try.To(app.Start())
 }
