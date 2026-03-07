@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.5.2] - 2026-03-07
+
+- 修复: IDCode 认证时的 `client_id` 应与 `application` 字段匹配而不是 `id` 字段
+
 ## [2.5.1] - 2025-12-31
 
 - 修复: 移除默认添加的 pbSecurityHeaders 中间件, 这会导致无法被嵌套进 iframe 中
