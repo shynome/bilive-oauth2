@@ -149,7 +149,7 @@ func initOAuth2(se *core.ServeEvent) (err error) {
 		try.To(err)
 
 		cid := r.FormValue("client_id")
-		client := try.To1(e.App.FindRecordById(db.TableClients, cid))
+		client := try.To1(e.App.FindFirstRecordByData(db.TableClients, "application", cid))
 
 		bconfig2 := bconfig
 		if client.GetString("bname") != "" {
