@@ -158,7 +158,17 @@ func initBilibili(se *core.ServeEvent) (err error) {
 		ctx, cause := context.WithCancelCause(ctx)
 		defer cause(nil)
 
-		app := try.To1(bclient.Open(ctx, bconfig.App, IDCode))
+		app, err := bclient.Open(ctx, bconfig.App, IDCode)
+		if err != nil {
+			if errors.Is(err, bilibili.ErrBilibiliApiError) {
+				var resp *bilibili.Response[json.RawMessage]
+				if errors.As(err, &resp) && resp.Code == 7007 {
+					return apis.NewUnauthorizedError(resp.Error(), resp)
+				}
+			}
+			err := fmt.Errorf("连接B站出错. %w", err)
+			return apis.NewBadRequestError(err.Error(), err)
+		}
 		defer app.Close()
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer func() {
