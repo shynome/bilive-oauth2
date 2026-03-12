@@ -163,7 +163,7 @@ func initBilibili(se *core.ServeEvent) (err error) {
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer func() {
 			closedMsg := "defer manual close"
-			if err := context.Cause(ctx); !errors.Is(err, context.Canceled) {
+			if err := context.Cause(ctx); err != nil && !errors.Is(err, context.Canceled) {
 				closedMsg = err.Error()
 			}
 			conn.Close(websocket.StatusAbnormalClosure, closedMsg)
