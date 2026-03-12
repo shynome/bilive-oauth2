@@ -226,6 +226,8 @@ func initBilibili(se *core.ServeEvent) (err error) {
 			var linked LinkedOpenID
 			// 客户端询问 OpenID 对应的 UID
 			if err := wsjson.Read(ctx, conn, &linked); err != nil {
+				err := fmt.Errorf("读取消息出错. %w", err)
+				cause(err)
 				return err
 			}
 			go func() {
