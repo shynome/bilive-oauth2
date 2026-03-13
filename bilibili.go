@@ -17,6 +17,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"github.com/cskr/pubsub/v2"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/shynome/bilive-oauth2/v2/db"
@@ -41,6 +42,19 @@ func initBilibili(se *core.ServeEvent) (err error) {
 
 	eg := se.Router.Group("/bilibili")
 	eg.BindFunc(func(e *core.RequestEvent) error {
+		if client, secret, ok := e.Request.BasicAuth(); ok {
+			q := "application = {:client} && secret = {:secret}"
+			p := dbx.Params{"client": client, "secret": secret}
+			application, err := e.App.FindFirstRecordByFilter(db.TableClients, q, p)
+			if err != nil {
+				return apis.NewUnauthorizedError("认证失败", err)
+			}
+			if application.GetInt("room") == 0 {
+				return apis.NewForbiddenError("此应用不支持直播间长连", err)
+			}
+			e.Auth = application
+			return e.Next()
+		}
 		auth := getToken(e.Request)
 		if auth == "" {
 			return apis.NewUnauthorizedError("missing token", nil)
@@ -170,6 +184,16 @@ func initBilibili(se *core.ServeEvent) (err error) {
 			return apis.NewBadRequestError(err.Error(), err)
 		}
 		defer app.Close()
+
+		if auth := e.Auth; auth != nil {
+			room := int64(auth.GetInt("room"))
+			info := app.Info().AnchorInfo
+			if info.RoomID != room {
+				err := fmt.Errorf("此应用 %s 只允许访问直播间 %d, 但用户却想用身份码 %s 访问 %d", e.Auth.GetString("application"), room, IDCode, info.RoomID)
+				return apis.NewForbiddenError("不支持访问此直播间", err)
+			}
+		}
+
 		conn := try.To1(websocket.Accept(w, r, nil))
 		defer func() {
 			closedMsg := "defer manual close"
