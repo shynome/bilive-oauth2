@@ -13,7 +13,7 @@ require (
 	github.com/pocketbase/dbx v1.11.0
 	github.com/pocketbase/pocketbase v0.30.0
 	github.com/shynome/err0 v0.2.1
-	github.com/shynome/openapi-bilibili v0.6.1
+	github.com/shynome/openapi-bilibili v0.6.3
 )
 
 require (
