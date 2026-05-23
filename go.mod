@@ -1,6 +1,6 @@
 module github.com/shynome/bilive-oauth2/v2
 
-go 1.24.0
+go 1.25.5
 
 require (
 	github.com/avast/retry-go/v4 v4.6.1
@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/pocketbase/dbx v1.11.0
 	github.com/pocketbase/pocketbase v0.30.0
+	github.com/shynome/bilireq v0.0.0-20260523151748-b2a254869d4e
 	github.com/shynome/err0 v0.2.1
 	github.com/shynome/openapi-bilibili v0.6.3
 )
@@ -25,6 +26,8 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/ganigeorgiev/fexpr v0.5.0 // indirect
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
+	github.com/go-resty/resty/v2 v2.17.2 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
