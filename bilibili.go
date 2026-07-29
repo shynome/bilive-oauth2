@@ -203,11 +203,21 @@ func initBilibili(se *core.ServeEvent) (err error) {
 			conn.Close(websocket.StatusAbnormalClosure, closedMsg)
 		}()
 		go func() {
-			if err := app.KeepAlive(ctx); err != nil {
-				cause(err)
-			} else {
-				cause(nil)
-			}
+			err := retry.Do(func() error {
+				return app.KeepAlive(ctx)
+			},
+				retry.RetryIf(func(err error) bool {
+					// 如果不是网络/网关错误, 而是业务错误的话直接退出不再重试
+					if errors.Is(err, bilibili.ErrBilibiliApiError) {
+						return false
+					}
+					return true
+				}),
+				retry.Context(ctx),
+				retry.Attempts(3),
+				retry.Delay(10*time.Second), // 网关错误10s一般能恢复, 再不济3次30s也够了
+			)
+			cause(err)
 		}()
 		info := WebsocketInfo{
 			WebsocketInfo: app.Info().WebsocketInfo,
