@@ -172,6 +172,13 @@ func initBilibili(se *core.ServeEvent) (err error) {
 		ctx, cause := context.WithCancelCause(ctx)
 		defer cause(nil)
 
+		defer err0.Then(&err, nil, func() {
+			err = errors.Join(
+				err,
+				fmt.Errorf("context error: %w", context.Cause(ctx)),
+			)
+		})
+
 		app, err := bclient.Open(ctx, bconfig.App, IDCode)
 		if err != nil {
 			if errors.Is(err, bilibili.ErrBilibiliApiError) {
