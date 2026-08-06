@@ -15,6 +15,8 @@ var args struct {
 
 	Code string // 身份码
 	Room int    // 直播间, 虽然身份码可以拿到直播间号, 但还是直接写一下吧
+
+	SMTPAddr string
 }
 
 type BConfig struct {
@@ -42,6 +44,7 @@ func main() {
 		flags.Int64Var(&bconfig.App, "app", 0, "bilibili App ID")
 		flags.StringVar(&args.Code, "code", "", "bilibili Room IDCode")
 		flags.IntVar(&args.Room, "room", 0, "bilibili Room number")
+		flags.StringVar(&args.SMTPAddr, "smtp", "", "smtp server listen addr")
 	}
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		privKey = ed25519.NewKeyFromSeed(args.jwtKey)
@@ -51,6 +54,7 @@ func main() {
 	app.OnServe().BindFunc(initBilibili) // 必须先初始化此项, 才有 bclient
 	app.OnServe().BindFunc(initBiliveServer)
 	app.OnServe().BindFunc(initOAuth2)
+	initSMTPTry(app)
 
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		// 移除默认添加的 X-Frame-Options, 有需要可以在反向代理那添加

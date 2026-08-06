@@ -6,6 +6,9 @@ require (
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/coder/websocket v1.8.13
 	github.com/cskr/pubsub/v2 v2.0.2
+	github.com/emersion/go-message v0.18.2
+	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
+	github.com/emersion/go-smtp v0.24.0
 	github.com/go-oauth2/oauth2/v4 v4.5.3
 	github.com/go-session/session v3.1.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -15,6 +18,7 @@ require (
 	github.com/shynome/bilireq v0.0.0-20260523151748-b2a254869d4e
 	github.com/shynome/err0 v0.2.1
 	github.com/shynome/openapi-bilibili v0.6.3
+	golang.org/x/sync v0.16.0
 )
 
 require (
@@ -42,7 +46,6 @@ require (
 	golang.org/x/image v0.30.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	modernc.org/libc v1.66.3 // indirect
