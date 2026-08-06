@@ -13,7 +13,6 @@ import (
 	"github.com/emersion/go-message/mail"
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/shynome/bilireq"
 	"github.com/shynome/bilive-oauth2/v2/db"
@@ -85,39 +84,16 @@ func (be *Backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 }
 
 type Session struct {
-	app     core.App
-	authSrv sasl.Server
-	auth    *core.Record
-	from    string
-	outbox  []string // 需要转发出去
+	app    core.App
+	from   *core.Record
+	outbox []string // 需要转发出去
 }
 
-var _ smtp.AuthSession = (*Session)(nil)
+var _ smtp.Session = (*Session)(nil)
 
 func (sess *Session) Reset() {
 	sess.outbox = []string{}
-	sess.auth = nil
-	sess.authSrv = sasl.NewPlainServer(func(identity, username, password string) error {
-		username, _, _ = strings.Cut(username, "@")
-		q := "application = {:user} && secret = {:pass}"
-		p := dbx.Params{"user": username, "pass": password}
-		ac, err := sess.app.FindFirstRecordByFilter(db.TableClients, q, p)
-		if err != nil {
-			return smtp.ErrAuthFailed
-		}
-		sess.auth = ac
-		return nil
-	})
-}
-
-func (sess *Session) AuthMechanisms() []string {
-	return []string{sasl.Plain}
-}
-func (sess *Session) Auth(mech string) (sasl.Server, error) {
-	if mech != sasl.Plain {
-		return nil, smtp.ErrAuthUnknownMechanism
-	}
-	return sess.authSrv, nil
+	sess.from = nil
 }
 
 var _ smtp.Session = (*Session)(nil)
@@ -126,15 +102,15 @@ func (sess *Session) Logout() error {
 	return nil
 }
 func (sess *Session) Mail(from string, opts *smtp.MailOptions) error {
-	if sess.auth == nil {
-		return smtp.ErrAuthRequired
+	id, _, _ := strings.Cut(from, "@")
+	auth, err := sess.app.FindRecordById(db.TableClients, id)
+	if err != nil {
+		return ErrUserNotFound
 	}
+	sess.from = auth
 	return nil
 }
 func (sess *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
-	if sess.auth == nil {
-		return smtp.ErrAuthRequired
-	}
 	uid, domain, found := strings.Cut(to, "@")
 	if !found {
 		return ErrDomainNotFound
@@ -156,7 +132,7 @@ func (sess *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 }
 
 func (sess *Session) Data(r io.Reader) (err error) {
-	if sess.auth == nil {
+	if sess.from == nil {
 		return smtp.ErrAuthRequired
 	}
 
@@ -186,12 +162,12 @@ func (sess *Session) Data(r io.Reader) (err error) {
 			}
 		}
 	}
-	application := sess.auth.GetString("bname")
+	application := sess.from.GetString("bname")
 	if application == "" {
-		application = sess.auth.GetString("domain")
+		application = sess.from.GetString("domain")
 	}
 	if application == "" {
-		application = sess.auth.GetString("application")
+		application = sess.from.GetString("application")
 	}
 	msg := "应用: " + application
 	msg += "\n主题: " + subject
