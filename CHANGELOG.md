@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.7.0] - todo
+## [2.7.0] - 2026-08-06
 
 - 添加 smtp server 以便向用户发送私信 (使用 bilierq 进行发送私信)
 
