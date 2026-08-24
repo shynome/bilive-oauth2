@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,8 @@ func initBiliveServer(se *core.ServeEvent) (err error) {
 	defer err0.Then(&err, nil, nil)
 
 	vids := try.To1(se.App.FindCachedCollectionByNameOrId(db.TableTmpVIDs))
+	key := ed25519.NewKeyFromSeed(args.jwtKey)
+	pubkey := key.Public()
 
 	eg := se.Router.Group("/bilive")
 
@@ -74,13 +77,45 @@ func initBiliveServer(se *core.ServeEvent) (err error) {
 				msg.WriteTry(stream)
 				if danmu.Content == vid.Id {
 					now := time.Now()
+					expires_at := jwt.NewNumericDate(now.AddDate(0, 0, 7))
+					func() {
+						auth := getToken(r)
+						if auth == "" {
+							return
+						}
+						claims := new(jwt.RegisteredClaims)
+						p := jwt.NewParser(
+							jwt.WithAudience("https://open-live.bilibili.com"),
+							jwt.WithSubject("root"),
+						)
+						token, err := p.ParseWithClaims(
+							auth, claims,
+							func(t *jwt.Token) (any, error) { return pubkey, nil },
+						)
+						if err != nil || !token.Valid {
+							return
+						}
+						inStr := r.URL.Query().Get("expires_in")
+						if inStr == "" {
+							return
+						}
+						if inStr == "forever" {
+							expires_at = nil
+							return
+						}
+						d, err := time.ParseDuration(inStr)
+						if err != nil {
+							return
+						}
+						expires_at = jwt.NewNumericDate(now.Add(d))
+					}()
 					claims := jwt.NewWithClaims(jwt.SigningMethodEdDSA, CustomClaims{
 						RegisteredClaims: jwt.RegisteredClaims{
 							Subject:   danmu.OpenID,
 							Issuer:    "https://bilive-auth.remoon.cn/",
 							IssuedAt:  jwt.NewNumericDate(now),
 							NotBefore: jwt.NewNumericDate(now),
-							ExpiresAt: jwt.NewNumericDate(now.AddDate(0, 0, 7)),
+							ExpiresAt: expires_at,
 						},
 						Nickname: danmu.Nickname,
 					})
